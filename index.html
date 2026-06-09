@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Europe 2026 — Day Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#09090f; --s1:#111118; --s2:#16161e; --s3:#1d1d27;
+  --border:rgba(255,255,255,0.07); --border-hi:rgba(255,255,255,0.13);
+  --t1:#f0f2f6; --t2:#b8bfcc; --t3:#6c7380; --t4:#3d4050;
+  --gold:#c8a347; --gold-bg:rgba(200,163,71,0.10); --gold-b:rgba(200,163,71,0.22);
+  --cyan:#00c8f0; --cyan-bg:rgba(0,200,240,0.10); --cyan-b:rgba(0,200,240,0.2);
+  --r:10px; --r-sm:6px;
+  --now:#e05252;   --now-bg:rgba(224,82,82,0.12);
+  --ahead:#d4932a; --ahead-bg:rgba(212,147,42,0.12);
+  --there:#2fb87a; --there-bg:rgba(47,184,122,0.10);
+  --free-c:#4a5068; --free-bg:rgba(74,80,104,0.25);
+  --verify:#d4732a; --verify-bg:rgba(212,115,42,0.14);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t1);font-size:14px;line-height:1.55;overflow:hidden;}
+a{color:var(--cyan);text-decoration:none;}
+a:hover{text-decoration:underline;}
+
+/* ── SHELL ── */
+.app{display:flex;flex-direction:column;height:100vh;}
+
+/* ── TOPBAR ── */
+.topbar{
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 24px;border-bottom:1px solid var(--border);background:var(--s1);
+  gap:12px;flex-wrap:wrap;
+}
+.topbar-title{font-size:15px;font-weight:700;color:var(--t1);}
+.topbar-meta{font-size:12px;color:var(--t3);margin-top:1px;}
+.topbar-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.pill{
+  font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;
+  border:1px solid var(--border-hi);color:var(--t3);background:none;
+  font-family:inherit;cursor:pointer;text-decoration:none;transition:all .12s;white-space:nowrap;
+}
+.pill:hover{color:var(--cyan);border-color:var(--cyan);text-decoration:none;}
+.pill.hot{color:var(--now);border-color:rgba(224,82,82,.4);background:var(--now-bg);}
+
+/* ── MAIN ── */
+.main{display:flex;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:180px;flex-shrink:0;border-right:1px solid var(--border);
+  overflow-y:auto;background:var(--s1);padding:8px 0 20px;
+  scrollbar-width:thin;scrollbar-color:var(--border-hi) transparent;
+}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px;}
+.sb-group{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t4);padding:14px 16px 5px;}
+.sb-group:first-child{padding-top:8px;}
+.sb-day{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;border-left:2px solid transparent;transition:all .12s;}
+.sb-day:hover{background:var(--s2);}
+.sb-day.active{background:var(--s2);border-left-color:var(--cyan);}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sb-date{font-size:12px;font-weight:600;color:var(--t2);line-height:1.2;}
+.sb-city{font-size:11px;color:var(--t3);line-height:1.2;margin-top:1px;}
+.sb-day.active .sb-date{color:var(--cyan);}
+.sb-day.active .sb-city{color:rgba(0,200,240,.65);}
+
+/* ── CONTENT ── */
+.content{
+  flex:1;overflow-y:auto;padding:28px 32px 60px;
+  scrollbar-width:thin;scrollbar-color:var(--border-hi) transparent;
+}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px;}
+.day-panel{display:none;max-width:860px;}
+.day-panel.active{display:block;}
+
+/* ── DAY HEADER ── */
+.day-header{margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+.dh-eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.dh-dot{width:8px;height:8px;border-radius:50%;}
+.day-header h1{font-size:26px;font-weight:700;letter-spacing:-.4px;color:var(--t1);margin-bottom:4px;}
+.day-header .dh-sub{font-size:13px;color:var(--t3);}
+.bday-hd h1{color:var(--gold);}
+.bday-hd .dh-eyebrow{color:rgba(200,163,71,.8);}
+
+/* ── BIRTHDAY BANNER ── */
+.bday-banner{
+  background:linear-gradient(135deg,rgba(200,163,71,.13),rgba(200,163,71,.03));
+  border:1px solid var(--gold-b);border-radius:var(--r);
+  padding:16px 18px;margin-bottom:18px;
+  display:flex;align-items:flex-start;gap:14px;
+}
+.bday-icon{font-size:28px;flex-shrink:0;line-height:1;}
+.bday-ttl{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:3px;}
+.bday-sub{font-size:13px;color:var(--t2);line-height:1.5;}
+
+/* ── SECTION HEADING ── */
+.sec-hd{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t4);margin:22px 0 10px;}
+
+/* ────────────────────────────────
+   HOTEL CARD
+──────────────────────────────── */
+.hotel-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px;}
+.hotel-card-lbl{font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--t4);padding:11px 16px 0;}
+.hotel-rec{padding:14px 16px 16px;border-bottom:1px solid var(--border);}
+.hotel-rec-badge{display:inline-flex;align-items:center;gap:5px;font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--gold);background:var(--gold-bg);border:1px solid var(--gold-b);border-radius:4px;padding:3px 9px;margin-bottom:9px;}
+.hotel-rec-name{font-size:16px;font-weight:700;color:var(--t1);margin-bottom:3px;line-height:1.3;}
+.hotel-rec-stars{font-size:12px;color:var(--gold);margin-bottom:8px;}
+.hotel-rec-detail{font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:13px;}
+.hotel-rec-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.hotel-rec-price{font-size:14px;font-weight:700;color:var(--gold);}
+.hotel-alts-hd{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t4);padding:9px 16px;background:rgba(255,255,255,.018);border-bottom:1px solid var(--border);}
+.hotel-alt{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--border);transition:background .1s;}
+.hotel-alt:hover{background:rgba(255,255,255,.02);}
+.ha-num{width:22px;height:22px;border-radius:50%;background:var(--s3);border:1px solid var(--border-hi);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--t4);}
+.ha-info{flex:1;min-width:0;}
+.ha-name{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px;}
+.ha-stars{font-size:11px;color:var(--gold);margin-right:5px;}
+.ha-detail{font-size:12px;color:var(--t3);line-height:1.45;}
+.ha-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.ha-price{font-size:12px;font-weight:600;color:var(--t3);white-space:nowrap;}
+
+/* Same-hotel strip */
+.same-hotel{display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 14px;margin-bottom:16px;}
+.sh-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sh-body{flex:1;}
+.sh-name{font-size:13px;font-weight:600;color:var(--t2);}
+.sh-meta{font-size:11px;color:var(--t4);}
+
+/* ── TRANSPORT CARD ── */
+.transport-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:15px 16px;margin-bottom:16px;}
+.tc-lbl{font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--t4);margin-bottom:7px;}
+.tc-name{font-size:14px;font-weight:600;color:var(--t1);margin-bottom:5px;}
+.tc-detail{font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:10px;}
+.tc-links{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ── LINK BUTTONS ── */
+.lbtn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--cyan-bg);border:1px solid var(--cyan-b);
+  color:var(--cyan);border-radius:var(--r-sm);
+  font-size:12px;font-weight:600;padding:6px 13px;
+  text-decoration:none;font-family:inherit;cursor:pointer;
+  transition:all .12s;white-space:nowrap;
+}
+.lbtn:hover{background:rgba(0,200,240,.18);text-decoration:none;}
+.lbtn.g{background:var(--gold-bg);border-color:var(--gold-b);color:var(--gold);}
+.lbtn.g:hover{background:rgba(200,163,71,.18);}
+.lbtn.sm{font-size:11px;padding:5px 11px;}
+.lbtn.dim{background:rgba(255,255,255,.04);border-color:var(--border-hi);color:var(--t3);}
+.lbtn.dim:hover{color:var(--t2);background:rgba(255,255,255,.07);}
+
+/* ── SCHEDULE ── */
+.sched{display:flex;flex-direction:column;gap:10px;}
+.tb{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;gap:14px;transition:border-color .12s;}
+.tb:hover{border-color:var(--border-hi);}
+.tb-time{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t4);min-width:76px;padding-top:1px;flex-shrink:0;}
+.tb-body{flex:1;min-width:0;}
+.tb-what{font-size:14px;font-weight:600;color:var(--t1);margin-bottom:3px;}
+.tb-why{font-size:13px;color:var(--t3);line-height:1.55;}
+.tb-tip{font-size:12px;color:var(--t4);line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-style:italic;}
+
+/* ────────────────────────────────
+   ACTIVITY OPTIONS (per time block)
+──────────────────────────────── */
+.opt-hd{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t4);margin:10px 0 6px;}
+.opt-list{display:flex;flex-direction:column;gap:5px;}
+.opt-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;background:var(--s3);
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  transition:border-color .1s;
+}
+.opt-item:hover{border-color:var(--border-hi);}
+.opt-item.rec{background:var(--gold-bg);border-color:var(--gold-b);}
+.oi-star{font-size:11px;color:var(--gold);width:14px;flex-shrink:0;text-align:center;}
+.oi-body{flex:1;min-width:0;}
+.oi-name{font-size:13px;font-weight:600;color:var(--t1);line-height:1.3;}
+.oi-note{font-size:11px;color:var(--t3);margin-top:1px;line-height:1.35;}
+.oi-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.oi-price{font-size:12px;font-weight:700;color:var(--t2);white-space:nowrap;}
+
+/* ── BOOKING ACTIONS ── */
+.actions{display:flex;flex-direction:column;gap:8px;}
+.ac{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;display:flex;align-items:center;gap:12px;transition:border-color .12s;}
+.ac:hover{border-color:var(--border-hi);}
+.badge{font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:4px 9px;border-radius:4px;white-space:nowrap;flex-shrink:0;min-width:90px;text-align:center;}
+.b-now{background:var(--now-bg);color:var(--now);border:1px solid rgba(224,82,82,.25);}
+.b-ahed{background:var(--ahead-bg);color:var(--ahead);border:1px solid rgba(212,147,42,.25);}
+.b-ther{background:var(--there-bg);color:var(--there);border:1px solid rgba(47,184,122,.2);}
+.b-free{background:var(--free-bg);color:var(--free-c);border:1px solid rgba(255,255,255,.08);}
+.b-vrfy{background:var(--verify-bg);color:var(--verify);border:1px solid rgba(212,115,42,.3);}
+.ac-info{flex:1;min-width:0;}
+.ac-name{font-size:14px;font-weight:600;color:var(--t1);margin-bottom:2px;}
+.ac-note{font-size:12px;color:var(--t3);line-height:1.4;}
+.ac-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.ac-price{font-size:13px;font-weight:700;color:var(--t2);white-space:nowrap;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:780px){
+  body{overflow:auto;}
+  .app{height:auto;}
+  .main{flex-direction:column;overflow:visible;}
+  .content{overflow:visible;padding:14px 14px 40px;}
+  .sidebar{width:100%;border-right:none;border-bottom:1px solid var(--border);overflow-x:auto;overflow-y:hidden;display:flex;flex-direction:row;padding:6px 8px;gap:3px;scrollbar-width:none;}
+  .sidebar::-webkit-scrollbar{display:none;}
+  .sb-group{display:none;}
+  .sb-day{flex-direction:column;align-items:center;gap:2px;padding:7px 10px;border-left:none;border-bottom:2px solid transparent;border-radius:var(--r-sm);white-space:nowrap;flex-shrink:0;}
+  .sb-day.active{background:var(--s3);border-bottom-color:var(--cyan);}
+  .sb-dot{display:none;}
+  .topbar{padding:10px 14px;}
+  .topbar-pills{display:none;}
+  .day-header h1{font-size:21px;}
+  .hotel-alt{flex-wrap:wrap;}
+  .ha-right{padding-top:4px;}
+  .ac{flex-wrap:wrap;}
+  .ac-right{width:100%;justify-content:flex-start;padding-top:4px;}
+  .opt-item{flex-wrap:wrap;}
+  .oi-right{padding-top:4px;}
+  .tb{flex-direction:column;gap:6px;}
+  .tb-time{min-width:auto;}
+}
+@media(max-width:480px){.content{padding:10px 10px 32px;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Europe 2026 &nbsp;·&nbsp; Day by Day</div>
+      <div class="topbar-meta">Aug 22 – Sep 6 &nbsp;·&nbsp; 2 travelers &nbsp;·&nbsp; Vienna · Budapest · Salzburg · Wolfgangsee · Ljubljana</div>
+    </div>
+    <div class="topbar-pills">
+      <button class="pill hot" onclick="go('day14')">🎂 Sep 5 Birthday</button>
+      <a class="pill" href="https://www.kayak.com/flights/LAX-VIE/2026-08-22/2adults" target="_blank">Flights</a>
+      <a class="pill" href="https://shop.oebbtickets.at/en/ticket" target="_blank">OBB Trains</a>
+      <a class="pill" href="https://www.flixbus.com" target="_blank">Flixbus</a>
+    </div>
+  </div>
+  <div class="main">
+    <nav class="sidebar" id="sb"></nav>
+    <div class="content" id="ct"></div>
+  </div>
+</div>
+
+<script>
+const C={travel:'#4a5068',vienna:'#6b8ebf',graz:'#8fbf6b',budapest:'#c8845a',salzburg:'#6baf8b',hallstatt:'#5aafbf',wolfgangsee:'#5a8faf',munich:'#b8945a',ljubljana:'#8f6baf',bled:'#6b9fbf'};
+
+const GROUPS=[
+  {label:'Departure',         ids:['day0']},
+  {label:'Vienna — Austria',  ids:['day1','day2','day3','day4']},
+  {label:'Budapest — Hungary',ids:['day5','day6']},
+  {label:'Salzburg — Austria',ids:['day7','day8']},
+  {label:'Wolfgangsee — AT',  ids:['day9','day10','day11']},
+  {label:'Ljubljana — SI',    ids:['day12','day13','day14','day15']},
+];
+
+// ─── ITINERARY ───────────────────────────────────────────────────────────────
+// hotel.ci = true → check-in day (full card with alts)
+// hotel.ci = false → same hotel (compact strip)
+// hotel = null → no hotel (travel day)
+// schedule item .options = [{rec, name, note, price, url, label}]
+// ─────────────────────────────────────────────────────────────────────────────
+const DAYS=[
+
+// ═══ DAY 0 — Aug 22 ══════════════════════════════════════════════
+{
+id:'day0',date:'Aug 22',dow:'Saturday',city:'Los Angeles',dest:'travel',
+headline:'Depart LAX',subtitle:'Overnight flight — arrive Vienna noon Sunday',
+hotel:null,
+transport:{
+  label:'TONIGHT — TRANSATLANTIC FLIGHT',
+  name:'LAX → VIE — ~11–12 hours',
+  detail:'Best option: Austrian Airlines direct LAX–VIE (arrives Vienna noon with no connection risk). Alternatives: Lufthansa via Frankfurt or SWISS via Zurich (~14 hrs each with layover). All depart LAX evening from Tom Bradley International Terminal. Book both outbound and return together for best pricing.',
+  links:[
+    {label:'Search Kayak',url:'https://www.kayak.com/flights/LAX-VIE/2026-08-22/2adults'},
+    {label:'Austrian Airlines',url:'https://www.austrian.com/us/en/flightbooking'},
+    {label:'Lufthansa',url:'https://www.lufthansa.com'},
+    {label:'SWISS',url:'https://www.swiss.com'},
+  ]
+},
+schedule:[
+  {time:'Afternoon',what:'Transfer to LAX — Tom Bradley International Terminal',
+   why:'Allow 3 full hours before departure. TBIT is a separate building — take the shuttle if connecting from another terminal. Check bags, clear security, relax.',
+   tip:'Download Austrian/Lufthansa app before you leave — boarding pass, seat changes, and meal preferences in one place. Noise-canceling headphones and an eye mask are worth more than any in-flight entertainment on this route.',
+   price:null},
+  {time:'Evening',what:'Board Overnight Flight to Vienna',
+   why:'Try to sleep even if it feels impossible. Adjust to European time from the moment you board — eat when Vienna says eat, sleep when Vienna says sleep. You land at noon Sunday.',
+   tip:'Skip the in-flight movie on the way out. Sleep is the only performance optimization that matters tonight.',
+   price:null},
+],
+actions:[
+  {badge:'now',name:'Outbound Flights — LAX → VIE (Aug 22)',note:'Book both legs together. August is peak European season — fares climb every week from spring.',price:'~$1,200–1,800/pp',url:'https://www.kayak.com/flights/LAX-VIE/2026-08-22/2adults',label:'Search Flights'},
+  {badge:'now',name:'Return Flights — LJU → LAX (Sep 6)',note:'Ljubljana has limited long-haul. Lufthansa via Frankfurt or SWISS via Zurich are the two reliable options.',price:'See above',url:'https://www.lufthansa.com',label:'Search Lufthansa'},
+]},
+
+// ═══ DAY 1 — Aug 23 ══════════════════════════════════════════════
+{
+id:'day1',date:'Aug 23',dow:'Sunday',city:'Vienna',dest:'vienna',
+headline:'Arrive Vienna',subtitle:'Land noon · Check in · First evening in the city',
+hotel:{
+  ci:true,stay:'4 nights · Aug 23–27',
+  name:'Austria Trend Hotel Savoyen Vienna',stars:'★★★★ Superior',
+  detail:'Quiet tree-lined street in the 3rd district, next to Belvedere gardens. Classical Viennese grandeur — high ceilings, generous rooms, outstanding breakfast buffet. 5 minutes to the Upper Belvedere entrance, 10 minutes to Naschmarkt. Central without the tourist noise of the 1st district.',
+  price:'€200–350/night',
+  url:'https://www.booking.com/hotel/at/austria-trend-savoy-vienna.html?checkin=2026-08-23&checkout=2026-08-27&group_adults=2&no_rooms=1',
+  alts:[
+    {name:'The Hoxton Vienna',stars:'★★★★',detail:'1st district near Schottentor. Design-forward boutique, great ground-floor café. Best walkability — the entire historic core is on foot. Design-conscious atmosphere, lively lobby bar.',price:'€200–320/night',url:'https://www.booking.com/hotel/at/the-hoxton-vienna.html?checkin=2026-08-23&checkout=2026-08-27&group_adults=2&no_rooms=1'},
+    {name:'25hours Hotel Museumsquartier',stars:'★★★★',detail:'7th district. Vienna\'s most creative hotel — circus-themed, rooftop sauna with panoramic city views. Best for travelers who want energy and personality over classical elegance.',price:'€170–280/night',url:'https://www.booking.com/hotel/at/25hours-wien.html?checkin=2026-08-23&checkout=2026-08-27&group_adults=2&no_rooms=1'},
+    {name:'Hotel Daniel Vienna',stars:'★★★ · Smart Budget',detail:'3rd district near the Belvedere. Sleek, minimal, small but well-designed rooms. Bike rental on-site. Best choice if you want to invest budget into experiences rather than the room.',price:'€90–160/night',url:'https://www.booking.com/hotel/at/daniel-vienna.html?checkin=2026-08-23&checkout=2026-08-27&group_adults=2&no_rooms=1'},
+  ]
+},
+transport:{
+  label:'AIRPORT → CITY CENTER',
+  name:'Vienna Airport → City Center — Choose Your Transfer',
+  detail:'Three options at different speeds and prices. All depart from the airport\'s arrivals level.',
+  links:[]
+},
+schedule:[
+  {time:'Noon',what:'Airport to Hotel — Choose Your Transfer',
+   why:'You\'ve just landed. The priority is getting to the hotel, checking in, and moving at a human pace.',
+   tip:'Request early check-in when you book the hotel — most Vienna properties can accommodate arriving guests by 1–2pm if the room is available.',
+   price:null,
+   options:[
+     {rec:true,name:'City Airport Train (CAT) — 16 min to Wien Mitte',note:'Direct, no stops. Runs every 30 min from airport Bahnhof (arrivals level). Cleanest option.',price:'€14.90/pp',url:'https://www.cityairporttrain.com/en/home',label:'CAT Info'},
+     {rec:false,name:'S-Bahn (S7) — 25 min, 4 stops to Wien Mitte',note:'Slower but cheaper. Same destination. Buy with Vienna public transport ticket.',price:'€4.40/pp',url:'https://www.wienerlinien.at',label:'Transit Info'},
+     {rec:false,name:'Airport Taxi — ~45 min to city center',note:'Fixed rate to city center. No transfers. Best if you have many bags or want door-to-door.',price:'~€35–40 flat',url:'https://flughafentaxi-wien.at',label:'Official Taxis'},
+   ]
+  },
+  {time:'Afternoon',what:'1st District Walk — Stephansplatz & Graben',
+   why:'NOTE: Naschmarkt is closed Sundays. Instead: walk Kärtner Strasse to Stephansdom cathedral, then the Graben pedestrian boulevard and Kohlmarkt. This is the historic heart of Vienna. Move slowly — you\'ve just crossed 9 time zones.',
+   tip:'St. Stephen\'s Cathedral interior is free. Climb the South Tower (137m, 343 steps, €5.50/pp) for the first Vienna panorama — or just walk the nave.',
+   price:'Free walk',
+   options:[
+     {rec:true,name:'St. Stephen\'s Cathedral — Interior Walk',note:'Free. The Gothic interior is extraordinary. The catacombs underneath: €6/pp guided tour.',price:'Free / €6 catacombs',url:'https://www.stephanskirche.at/en/',label:'Official Site'},
+     {rec:false,name:'South Tower Climb — 137m panorama',note:'343 steps. No elevator. The best free city view in Vienna.',price:'€5.50/pp',url:'https://www.stephanskirche.at/en/',label:'Tickets'},
+     {rec:false,name:'Graben + Kohlmarkt Walk Only',note:'Vienna\'s finest pedestrian streets. Just walk. Window shop. No ticket needed.',price:'Free',url:null,label:null},
+   ]
+  },
+  {time:'Evening',what:'Dinner — First Night in Vienna',
+   why:'Essential first dinner in the city. The Wiener Schnitzel should be the first meal — this is the gastronomic entry point to Austria.',
+   tip:'Order the Wiener Schnitzel vom Kalb (veal — the authentic version), house potato salad, and a glass of Grüner Veltliner. Skip the appetizers. The schnitzel is the event.',
+   price:'€25–45/pp',
+   options:[
+     {rec:true,name:'Figlmüller Wollzeile — World-Famous Schnitzel Since 1905',note:'The schnitzel overhangs the plate. Best atmosphere of the two Figlmüller locations. Reserve ahead.',price:'€25–40/pp',url:'https://figlmueller.at/en/reservations/',label:'Reserve Table'},
+     {rec:false,name:'Gasthaus Pöschl — Classic Viennese Local',note:'More local, less tourist-facing. Deep Viennese coffeehouse tradition, Tafelspitz, Sauerkraut. Quieter room.',price:'€20–35/pp',url:'https://gasthaus-poeschl.at',label:'Official Site'},
+     {rec:false,name:'Zum Wohl — Wine Bar & Small Plates',note:'Award-winning Austrian wine selection with modern small plates. For those who prefer grazing over a single-dish dinner.',price:'€30–50/pp',url:'https://www.zumwohl.at',label:'Official Site'},
+   ]
+  },
+],
+actions:[
+  {badge:'now',name:'Vienna Hotel — 4 nights (Aug 23–27)',note:'Book now. Quality Vienna hotels fill by July for August.',price:'from €90/night',url:'https://www.booking.com/hotel/at/austria-trend-savoy-vienna.html?checkin=2026-08-23&checkout=2026-08-27&group_adults=2&no_rooms=1',label:'Book Hotel'},
+  {badge:'ahed',name:'Figlmüller — Dinner Reservation',note:'Reserve 1–2 weeks before arrival.',price:'€25–40/pp',url:'https://figlmueller.at/en/reservations/',label:'Reserve Table'},
+  {badge:'ther',name:'City Airport Train (CAT)',note:'Buy at machine in arrivals hall on the day.',price:'€14.90/pp',url:'https://www.cityairporttrain.com/en/home',label:'Official Site'},
+]},
+
+// ═══ DAY 2 — Aug 24 ══════════════════════════════════════════════
+{
+id:'day2',date:'Aug 24',dow:'Monday',city:'Vienna',dest:'vienna',
+headline:'Vienna — Palaces Day',subtitle:'Schönbrunn morning · Upper Belvedere afternoon · Klimt\'s The Kiss',
+hotel:{ci:false,name:'Austria Trend Hotel Savoyen Vienna',location:'3rd district · Night 2 of 4'},
+transport:null,
+schedule:[
+  {time:'9:00 AM',what:'Schönbrunn Palace',
+   why:'Habsburg imperial summer palace — 1,441 rooms, UNESCO World Heritage. The formal baroque gardens climb up to the Gloriette at the top (panoramic view, free entry). Tour groups from coach buses arrive by 10:30am — the 9am window is nearly private.',
+   tip:'Buy tickets online in advance and go straight to the gate with your mobile ticket. The state rooms are extraordinary — gilded ceilings, Empress Maria Theresa\'s apartments, Napoleon\'s bedroom.',
+   options:[
+     {rec:true,name:'Grand Tour — 40 State Rooms + Gardens',note:'The complete experience. ~2.5 hrs total including the gardens walk up to the Gloriette.',price:'€38/pp',url:'https://www.imperialtickets.com/en/product/schonbrunn-palace-grand-tour',label:'Buy Ticket'},
+     {rec:false,name:'Imperial Tour — 26 State Rooms',note:'Shorter version. ~1.5 hrs. Covers the essential apartments. Good if energy is limited.',price:'€30/pp',url:'https://www.imperialtickets.com/en/product/schonbrunn-palace-imperial-tour',label:'Buy Ticket'},
+     {rec:false,name:'Schönbrunn Zoo Only — No Palace',note:'The oldest zoo in the world (1752), within the palace grounds. Alternative if animals > palaces.',price:'€25/pp',url:'https://www.zoovienna.at/en/visit-us/prices/',label:'Buy Ticket'},
+     {rec:false,name:'Gardens Only — No Palace Interior',note:'The baroque formal gardens and Gloriette are FREE to enter. Walk without any ticket.',price:'Free',url:null,label:null},
+   ]
+  },
+  {time:'Afternoon',what:'Upper Belvedere — Klimt\'s The Kiss',
+   why:'Klimt\'s The Kiss lives in the permanent collection here. It is not a reproduction. It is not a poster. In person, the gold leaf and the scale of it is categorically different from anything you have seen of it. The baroque garden between Upper and Lower Belvedere is free.',
+   tip:'The Klimt room is on the first floor of the Upper Belvedere. The museum is never as crowded as Schönbrunn. Allow 1.5–2 hours at most.',
+   options:[
+     {rec:true,name:'Upper Belvedere Only — Klimt + Schiele + Kokoschka',note:'The essential visit. Permanent collection of 19th–20th century Austrian masters.',price:'€23/pp',url:'https://www.belvedere.at/en/go/tickets',label:'Buy Ticket'},
+     {rec:false,name:'Upper + Lower Belvedere — Combo Ticket',note:'Lower Belvedere houses Baroque museum and Orangery. Adds ~1 hour. Worth it if energy holds.',price:'€30/pp',url:'https://www.belvedere.at/en/go/tickets',label:'Buy Ticket'},
+     {rec:false,name:'Belvedere Gardens Only',note:'The formal garden between the two palaces. Free entry. Walk without a ticket.',price:'Free',url:'https://www.belvedere.at',label:'Official Site'},
+   ]
+  },
+  {time:'Evening',what:'Dinner — Spittelberg or MuseumsQuartier',
+   why:'The 7th district is where local Vienna eats in summer. Cobblestone streets, outdoor terrace seating, no tourist restaurants. The gradient from tourist to local drops sharply once you cross the Ring.',
+   tip:'Walk Spittelberggasse first — it is essentially a single street of excellent restaurants. Arrive before 7pm to get outdoor terrace seating without waiting.',
+   options:[
+     {rec:true,name:'Amerlingbeisl — Courtyard Garden Terrace',note:'Best courtyard garden terrace in the 7th. Viennese classics, great atmosphere in August.',price:'€25–40/pp',url:'https://www.amerlingbeisl.at',label:'Official Site'},
+     {rec:false,name:'Plutzer Bräu — Brew Pub in a Vaulted Cellar',note:'House-brewed beer, hearty Austrian food in a beautiful brick cellar. Lively and local.',price:'€20–30/pp',url:'https://www.plutzerbräu.at',label:'Official Site'},
+     {rec:false,name:'Zu den zwei Liesln — Old Vienna',note:'Traditional Viennese gasthaus, the most authentically un-touristy option. Cash preferred.',price:'€18–28/pp',url:'https://www.zudenzweiliesln.at',label:'Official Site'},
+   ]
+  },
+],
+actions:[
+  {badge:'ahed',name:'Schönbrunn Grand Tour',note:'Book online 2–4 weeks ahead for August. Skip the queue with mobile ticket.',price:'€38/pp',url:'https://www.imperialtickets.com/en/product/schonbrunn-palace-grand-tour',label:'Buy Ticket'},
+  {badge:'ther',name:'Belvedere Upper Museum',note:'Buy at the door or online — same price, marginally faster entry online.',price:'€23/pp',url:'https://www.belvedere.at/en/go/tickets',label:'Buy Ticket'},
+]},
+
+// ═══ DAY 3 — Aug 25 ══════════════════════════════════════════════
+{
+id:'day3',date:'Aug 25',dow:'Tuesday',city:'Graz — Day Trip',dest:'graz',
+headline:'Graz Day Trip',subtitle:'1 hour by Railjet · Return to Vienna tonight',
+hotel:{ci:false,name:'Austria Trend Hotel Savoyen Vienna',location:'3rd district · Night 3 of 4'},
+transport:{
+  label:'GETTING THERE + BACK — RAILJET',
+  name:'Wien Hauptbahnhof ↔ Graz Hauptbahnhof — ~1 hour each way',
+  detail:'Depart Wien Hbf early morning (7 or 8am). Direct Railjet to Graz — no changes. Graz station is central, everything walkable from it. Return from Graz Hbf in the evening. Trains run hourly. Book both directions together on OBB for best advance fares.',
+  links:[{label:'Book Both Directions',url:'https://shop.oebbtickets.at/en/ticket'}]
+},
+schedule:[
+  {time:'Early',what:'Railjet to Graz — Depart 7 or 8am',
+   why:'Arrive Graz by 9am. Maximizes your day. Graz is Austria\'s second largest city but receives a fraction of Vienna\'s tourism — the old town is largely local.',
+   tip:'Have your OBB tickets booked before you arrive at Wien Hbf. Reserve seats on the Railjet for the best journey.',
+   price:'~€20/pp one way',
+   options:[
+     {rec:true,name:'Railjet Direct — Wien Hbf to Graz Hbf, ~1 hr',note:'Best option. Reserved seating. Depart 7 or 8am.',price:'~€20/pp',url:'https://shop.oebbtickets.at/en/ticket',label:'Book OBB'},
+     {rec:false,name:'Drive via A2 Autobahn — ~1.5 hrs',note:'More flexibility for the day. Useful if combining with side trips into Styrian wine country on the return.',price:'Toll + fuel ~€30',url:null,label:null},
+   ]
+  },
+  {time:'Morning',what:'Schlossberg Hill — Castle Hill & Clock Tower',
+   why:'The 473m hill rising from the city center is Graz\'s defining landmark. The 16th-century Clock Tower (Uhrturm) has intentionally inverted clock hands — the large hand tells the hours, small hand the minutes — a quirk since 1712. Panoramic views of the red-tiled old city and the Mur river.',
+   tip:'Descend on the far side through the park after seeing the tower — the city looks entirely different from each angle of the hill.',
+   options:[
+     {rec:true,name:'Glass Elevator + Clock Tower',note:'The Austrian-designed glass elevator cuts through the hill from Schlossbergplatz. Quick and visually striking.',price:'€2.20/pp',url:'https://www.graztourismus.at/sightseeing/schlossberg',label:'Official Site'},
+     {rec:false,name:'Walk the 260 Steps — Free',note:'Free. 10–15 minute climb. Better cardio, same view.',price:'Free',url:null,label:null},
+     {rec:false,name:'Schlossbergbahn — Historic Funicular',note:'Charming 1894 funicular. Runs from Andreas-Hofer-Platz.',price:'€2.20/pp',url:'https://www.graztourismus.at',label:'Official Site'},
+   ]
+  },
+  {time:'Lunch',what:'Lunch in Graz — Choose Your Setting',
+   why:'Graz has excellent restaurant options at every price point. The Aiola Upstairs rooftop is the premium experience; the alternatives are more affordable.',
+   tip:'If choosing Aiola Upstairs, reserve the rooftop terrace before the day trip — not the day of.',
+   options:[
+     {rec:true,name:'Aiola Upstairs — Rooftop on Schlossberg',note:'The best view in Graz. Styrian cuisine: pumpkin seed oil on everything, local meats, Schilcher rosé. Reserve before arrival.',price:'€30–50/pp',url:'https://upstairs.aiola.at/en/',label:'Reserve Table'},
+     {rec:false,name:'Kunsthauscafé — Inside the Friendly Alien',note:'The museum café inside the Kunsthaus. Modern Styrian food, good coffee, architecture views.',price:'€15–25/pp',url:'https://www.museum-joanneum.at/en/kunsthaus-graz',label:'Official Site'},
+     {rec:false,name:'Hauptplatz Market Stalls — Budget Lunch',note:'Open-air market food at the main square. Baked goods, local produce, bratwurst. Most local option.',price:'€8–15/pp',url:null,label:null},
+   ]
+  },
+  {time:'Afternoon',what:'Kunsthaus Graz + Landhaushof Courtyard',
+   why:'The Kunsthaus is Austria\'s flagship contemporary art museum — the blue biomorphic building looks genuinely alien against the Baroque surroundings. Then the Landhaushof: the most beautiful Renaissance courtyard in Austria, free to enter.',
+   tip:'The Landhaushof is through an archway on Herrengasse — easy to miss. The courtyard is extraordinary and completely free.',
+   options:[
+     {rec:true,name:'Kunsthaus Graz + Landhaushof (both)',note:'The essential combination. Allow 2 hours for both.',price:'€13/pp',url:'https://www.museum-joanneum.at/en/kunsthaus-graz',label:'Buy Ticket'},
+     {rec:false,name:'Landhaushof Courtyard Only — Free',note:'If skipping the museum. The Renaissance courtyard is the architectural highlight of Graz and completely free.',price:'Free',url:null,label:null},
+     {rec:false,name:'Joanneum Museums Combo',note:'Covers Kunsthaus + Natural History + more. Worth it if you want 3+ hours of museums.',price:'€17/pp',url:'https://www.museum-joanneum.at/en/tickets',label:'Combo Ticket'},
+   ]
+  },
+  {time:'Evening',what:'Railjet Back to Vienna',
+   why:'Evening train from Graz Hbf to Wien Hbf. ~1 hour. Quick dinner in Vienna or takeaway.',
+   tip:null,price:'~€20/pp'},
+],
+actions:[
+  {badge:'ahed',name:'Railjet Tickets — Vienna ↔ Graz (both ways)',note:'Book both directions together on OBB. Advance fares significantly cheaper.',price:'~€40/pp both legs',url:'https://shop.oebbtickets.at/en/ticket',label:'Book OBB'},
+  {badge:'ahed',name:'Aiola Upstairs — Lunch Reservation',note:'Reserve 3–7 days ahead. Rooftop tables fill in summer.',price:'€30–50/pp',url:'https://upstairs.aiola.at/en/',label:'Reserve Table'},
+  {badge:'ther',name:'Kunsthaus Graz',note:'Buy at the entrance on the day.',price:'€13/pp',url:'https://www.museum-joanneum.at/en/kunsthaus-graz',label:'Official Site'},
+]},
+
+// ═══ DAY 4 — Aug 26 ══════════════════════════════════════════════
+{
+id:'day4',date:'Aug 26',dow:'Wednesday',city:'Vienna',dest:'vienna',
+headline:'Vienna — Last Full Day',subtitle:'Hofburg · Riesenrad · Farewell dinner',
+hotel:{ci:false,name:'Austria Trend Hotel Savoyen Vienna',location:'3rd district · Night 4 of 4 (last night)'},
+transport:null,
+schedule:[
+  {time:'Morning',what:'Hofburg Palace Complex',
+   why:'The Habsburg winter residence. One ticket covers three experiences: the Sisi Museum (Empress Elisabeth\'s personal artifacts — obsessively detailed), the Imperial Apartments (Franz Joseph\'s working rooms), and the Imperial Silver Collection. Allow 2–2.5 hours.',
+   tip:'Start with the Sisi Museum — it sets the emotional and historical frame for everything else. The contrast between her public image and her private life is genuinely remarkable.',
+   options:[
+     {rec:true,name:'Sisi Ticket — All Three Areas',note:'Sisi Museum + Imperial Apartments + Silver Collection. The complete visit. One entry covers all.',price:'€17.50/pp',url:'https://www.sisimuseum-hofburg.at/en/tickets/tickets-prices',label:'Buy Ticket'},
+     {rec:false,name:'Sisi Museum Only',note:'Fastest option — just the personal story of Empress Elisabeth. ~45 minutes.',price:'€13/pp',url:'https://www.sisimuseum-hofburg.at/en/tickets/tickets-prices',label:'Buy Ticket'},
+     {rec:false,name:'Free: Hofburg Exterior + Hero\'s Square',note:'The Heldenplatz and outer court are free. Impressive scale even without entering any paid rooms.',price:'Free',url:null,label:null},
+   ]
+  },
+  {time:'Afternoon',what:'Prater Park + Riesenrad (Giant Ferris Wheel)',
+   why:'The 1897 Giant Ferris Wheel is a genuine Vienna institution — one full rotation at 64m gives the classic panorama. Then walk through the Prater park: chestnuts, horse tracks, completely local. Very un-touristy.',
+   tip:'Buy Riesenrad tickets at the base on the day. The rotation takes about 20 minutes. The park itself is completely free and extraordinary in late August.',
+   options:[
+     {rec:true,name:'Riesenrad + Prater Park Walk',note:'Full rotation on the 1897 ferris wheel, then a walk through the park. Allow 2–3 hours.',price:'€14/pp',url:'https://www.wienerriesenrad.com/en/tickets/',label:'Buy Ticket'},
+     {rec:false,name:'Prater Wurstelprater — Vienna\'s Oldest Amusement Park',note:'The historic funfair attached to the Riesenrad. Retro rides, cotton candy, very local Vienna.',price:'Rides €2–8 each',url:'https://www.prater.at',label:'Official Site'},
+     {rec:false,name:'Skip Prater — Extra time at the Kunsthistorisches Museum',note:'Vienna\'s fine arts museum (Vermeer, Rubens, Velázquez, Titian). If you prefer art to ferris wheels.',price:'€21/pp',url:'https://www.khm.at/en/visit/tickets/',label:'Buy Ticket'},
+   ]
+  },
+  {time:'Evening',what:'Farewell Vienna Dinner',
+   why:'Final evening in Vienna. Three clear options at different investment levels.',
+   tip:'Book Steirereck 3–4 weeks ahead minimum. The coffeehouse option is walk-in for dinner (though crowded) — arrive by 6:30pm for a table.',
+   options:[
+     {rec:true,name:'Steirereck im Stadtpark — Austria\'s Finest Restaurant',note:'In the middle of the Stadtpark by the pavilion. Austria\'s top table. Book 3–4 weeks ahead.',price:'€100+/pp',url:'https://www.steirereck.at/en/reservierung/',label:'Reserve Table'},
+     {rec:false,name:'Café Landtmann — Grand Viennese Coffeehouse, Since 1873',note:'Tafelspitz, Apfelstrudel, Melange. Full dinner menu. Vienna at its most classically itself.',price:'€30–50/pp',url:'https://www.landtmann.at',label:'Reserve Table'},
+     {rec:false,name:'Neighborhood Dinner — 7th District Return',note:'Return to Spittelberg for a low-key final evening. Amerlingbeisl, Plutzer Bräu, or a new spot.',price:'€20–35/pp',url:null,label:null},
+   ]
+  },
+],
+actions:[
+  {badge:'ther',name:'Hofburg Sisi Ticket — All Three Areas',note:'Buy at the Imperial Apartments ticket office on the morning.',price:'€17.50/pp',url:'https://www.sisimuseum-hofburg.at/en/tickets/tickets-prices',label:'Buy Ticket'},
+  {badge:'ther',name:'Riesenrad — Giant Ferris Wheel',note:'Buy at base on the day.',price:'€14/pp',url:'https://www.wienerriesenrad.com/en/tickets/',label:'Buy Ticket'},
+  {badge:'ahed',name:'Steirereck im Stadtpark — If Splurging',note:'Reserve 3–4 weeks ahead. Austria\'s best restaurant.',price:'€100+/pp',url:'https://www.steirereck.at/en/reservierung/',label:'Reserve Table'},
+  {badge:'now',name:'Book Vienna → Budapest Train (Aug 27)',note:'Secure your morning Railjet from Wien Hbf to Budapest-Keleti tonight.',price:'~€30–50/pp',url:'https://shop.oebbtickets.at/en/ticket',label:'Book Now'},
+]},
+
+// ═══ DAY 5 — Aug 27 ══════════════════════════════════════════════
+{
+id:'day5',date:'Aug 27',dow:'Thursday',city:'Budapest',dest:'budapest',
+headline:'Vienna → Budapest',subtitle:'Railjet 2.5 hrs · Buda Castle · Danube dinner cruise',
+hotel:{
+  ci:true,stay:'1 night · Aug 27–28',
+  name:'Hotel Victoria Budapest',stars:'★★★★',
+  detail:'Danube riverfront, Buda side. 29 rooms — every room has a direct view of the illuminated Parliament across the river. Intimate scale, personal service. The only single-night Budapest choice that truly earns what it costs.',
+  price:'€150–280/night',
+  url:'https://www.booking.com/hotel/hu/victoria.html?checkin=2026-08-27&checkout=2026-08-28&group_adults=2&no_rooms=1',
+  alts:[
+    {name:'Clark Hotel Budapest',stars:'★★★★',detail:'At the Chain Bridge approach, Buda side. Rooftop infinity pool with the Pest skyline below. Contemporary design, strong restaurant. More design-forward than Victoria.',price:'€180–300/night',url:'https://www.booking.com/hotel/hu/clark-budapest.html?checkin=2026-08-27&checkout=2026-08-28&group_adults=2&no_rooms=1'},
+    {name:'Aria Hotel Budapest',stars:'★★★★★',detail:'Near St. Stephen\'s Basilica, Pest side. Music-themed luxury boutique, rooftop bar with basilica and city views. The premium splurge for a single memorable Budapest night.',price:'€280–450/night',url:'https://www.booking.com/hotel/hu/aria-hotel-budapest.html?checkin=2026-08-27&checkout=2026-08-28&group_adults=2&no_rooms=1'},
+    {name:'NH Collection Budapest City Center',stars:'★★★★',detail:'Pest side, pedestrian heart of the city. Strong 4-star reliability, walking distance to Great Market Hall, Váci utca. Traditional luxury without boutique personality.',price:'€130–220/night',url:'https://www.booking.com/hotel/hu/nh-budapest-city-center.html?checkin=2026-08-27&checkout=2026-08-28&group_adults=2&no_rooms=1'},
+  ]
+},
+transport:{
+  label:'GETTING THERE — RAILJET',
+  name:'Wien Hauptbahnhof → Budapest-Keleti — ~2.5 hours',
+  detail:'Direct Railjet. Departs Wien Hbf, arrives Budapest-Keleti station. Trains run hourly. Morning or midday departure recommended. From Keleti to most Buda-side hotels: Metro Line 2 (red, 3 stops to Deák tér) or taxi — use the Bolt app, not street cabs at Keleti.',
+  links:[{label:'Book OBB',url:'https://shop.oebbtickets.at/en/ticket'}]
+},
+schedule:[
+  {time:'Morning',what:'Check out Vienna · Railjet to Budapest',
+   why:'~2.5 hours. Beautiful Hungarian plain after the Austrian hills. Arrive early afternoon, check in, drop bags.',
+   tip:'From Budapest-Keleti to most hotels: Metro Line 2 (€1.50/pp) or taxi via Bolt app (~€12 flat). Avoid unlicensed cabs at Keleti.',
+   price:'~€30–50/pp'},
+  {time:'Afternoon',what:'Buda Castle District',
+   why:'The Castle District is the must-do of any Budapest visit. Matthias Church, Fisherman\'s Bastion terrace (best panoramic view of the Danube and Pest), cobblestone medieval lanes. The Chain Bridge walk below gives the best river-level photograph.',
+   tip:'Fisherman\'s Bastion lower level is free. Upper terrace €5/pp — worth it for the direct fortress view. The view of Parliament at dusk from the upper terrace is extraordinary.',
+   options:[
+     {rec:true,name:'Castle Funicular (Budavári Sikló) + Walk Down',note:'Historic 1870 funicular up. Walk the castle district. Descend via the garden terraces. €8/pp one way up.',price:'€8/pp one way',url:'https://bkv.hu/en/funicular/',label:'Funicular Info'},
+     {rec:false,name:'Funicular Both Ways',note:'Ride up, ride down. Return ticket. Practical if the downhill walk feels like too much after a full day.',price:'€14/pp return',url:'https://bkv.hu/en/funicular/',label:'Funicular Info'},
+     {rec:false,name:'Walk Both Ways — Free',note:'The uphill path takes ~20 minutes via Via Crucis steps. Free, and the views during the climb are excellent.',price:'Free',url:null,label:null},
+   ]
+  },
+  {time:'Evening',what:'Danube Dinner Cruise',
+   why:'Budapest becomes a different city after dark — the Parliament, bridges, and Castle illuminate gold over the river. A dinner cruise on the Danube is categorically different from any land viewpoint. The dinner is secondary to the setting.',
+   tip:'Book deck seats (outdoor), not the enclosed lower deck. The August evening air on the Danube is the experience. Pre-book online — this fills.',
+   options:[
+     {rec:true,name:'Legenda Dinner Cruise — 3 hours, Live Music',note:'The established quality option. Deck seating, dinner, live folk music, Parliament views. Book online now.',price:'€110/pp',url:'https://legenda.hu/en/ticket-purchase',label:'Book Cruise'},
+     {rec:false,name:'Budapest Boat Party — Sundowner + Dinner',note:'More party atmosphere. Younger crowd. Shorter cruise (~2 hrs). Lower price point.',price:'€65–80/pp',url:'https://www.budapestboatparty.com',label:'Book Cruise'},
+     {rec:false,name:'Skip Cruise — Dinner at Aszu Restaurant',note:'If you prefer a table restaurant. Aszu: fine Hungarian cuisine with Parliament views from a riverside terrace.',price:'€50–80/pp',url:'https://aszurestaurant.hu',label:'Reserve Table'},
+   ]
+  },
+],
+actions:[
+  {badge:'now',name:'Budapest Hotel — 1 night (Aug 27–28)',note:'Book alongside Vienna hotel. One night — needs to be right.',price:'from €130/night',url:'https://www.booking.com/hotel/hu/victoria.html?checkin=2026-08-27&checkout=2026-08-28&group_adults=2&no_rooms=1',label:'Book Hotel'},
+  {badge:'now',name:'Danube Dinner Cruise — Legenda',note:'Book now. Fills weeks ahead in August.',price:'€110/pp',url:'https://legenda.hu/en/ticket-purchase',label:'Book Cruise'},
+  {badge:'ahed',name:'Railjet — Vienna → Budapest',note:'Book 1–2 weeks ahead for seat selection.',price:'~€30–50/pp',url:'https://shop.oebbtickets.at/en/ticket',label:'Book OBB'},
+]},
+
+// ═══ DAY 6 — Aug 28 ══════════════════════════════════════════════
+{
+id:'day6',date:'Aug 28',dow:'Friday',city:'Budapest → Salzburg',dest:'budapest',
+headline:'Budapest → Salzburg',subtitle:'Thermal baths morning · Train to Salzburg afternoon',
+hotel:{
+  ci:true,stay:'3 nights · Aug 28–31',
+  name:'Hotel Stein',stars:'★★★★',
+  detail:'Old Town Salzburg, Salzach riverfront. The rooftop terrace is probably the most photographed view in Salzburg — Hohensalzburg fortress, the cathedral domes, and the Alps in panorama. Walking distance to everything. Fills before any other hotel in August.',
+  price:'€200–320/night',
+  url:'https://www.booking.com/hotel/at/culthotelstein.html?checkin=2026-08-28&checkout=2026-08-31&group_adults=2&no_rooms=1',
+  alts:[
+    {name:'Arthotel Blaue Gans',stars:'★★★★',detail:'Austria\'s oldest inn (est. 1350). Art collection throughout, steps from Getreidegasse. Outstanding breakfast, genuine historic atmosphere. For travelers who want the deep history of Salzburg in their accommodation.',price:'€190–300/night',url:'https://www.booking.com/hotel/at/arthotel-blaue-gans.html?checkin=2026-08-28&checkout=2026-08-31&group_adults=2&no_rooms=1'},
+    {name:'Hotel Wolf Dietrich',stars:'★★★★',detail:'Family-run for decades. Small indoor pool (rare in central Salzburg). Near Mirabell Gardens. Warm personal service, quiet street. Consistently reliable.',price:'€160–260/night',url:'https://www.booking.com/hotel/at/classic.html?checkin=2026-08-28&checkout=2026-08-31&group_adults=2&no_rooms=1'},
+    {name:'Hotel Goldgasse',stars:'★★★★',detail:'16th-century building. 14 rooms only. Most intimate boutique at this price in Salzburg. Beautiful courtyard. Books out very early.',price:'€170–270/night',url:'https://www.booking.com/hotel/at/hotel-goldgasse.html?checkin=2026-08-28&checkout=2026-08-31&group_adults=2&no_rooms=1'},
+  ]
+},
+transport:{
+  label:'BUDAPEST → SALZBURG — AFTERNOON TRAIN',
+  name:'Budapest-Keleti → Salzburg Hbf — ~5.5 hours (change in Vienna)',
+  detail:'Depart Budapest-Keleti after the baths (midday or 1pm). Change at Wien Hauptbahnhof, then Railjet direct to Salzburg. Arrive Salzburg early evening. Check OBB for direct routing options — some schedules run via Villach.',
+  links:[{label:'Book OBB',url:'https://shop.oebbtickets.at/en/ticket'}]
+},
+schedule:[
+  {time:'9:00 AM',what:'Széchenyi Thermal Baths',
+   why:'Go at opening. Two hours at 9am before peak crowds: steam rising over the outdoor pools in the yellow neo-baroque building, old men playing chess waist-deep in warm water. One of Europe\'s great experiences. By 11am it\'s crowded.',
+   tip:'Book online ahead for faster entry. Bring a towel (or rent for ~€5). Cabin or locker (~€2). The outdoor pools are the point — skip the indoor pools if pressed for time.',
+   options:[
+     {rec:true,name:'Standard Online Ticket — Outdoor + Indoor Pools',note:'Recommended. Book online for faster entry. Full access to all thermal pools.',price:'€33/pp',url:'https://szechenyibath.com/ticket',label:'Buy Ticket'},
+     {rec:false,name:'Cabin Rental — Private Changing Room for 2',note:'You get a private cabin as your base rather than a locker. More comfortable for couples. Add-on to standard ticket.',price:'€80+/cabin',url:'https://szechenyibath.com/ticket',label:'Buy Ticket'},
+     {rec:false,name:'VIP Ticket — Priority Entry + Towel + Robe',note:'Includes all amenities. Fastest access. Worth it if arriving after 10am.',price:'€60/pp',url:'https://szechenyibath.com/ticket',label:'Buy Ticket'},
+   ]
+  },
+  {time:'Midday',what:'Check out Budapest · Afternoon train to Salzburg',
+   why:'Collect bags from hotel. Train from Budapest-Keleti. ~5.5 hours. Arrive Salzburg early evening.',
+   tip:null,price:'~€50–80/pp'},
+  {time:'Evening',what:'Arrive Salzburg — First Walk at Night',
+   why:'Check in. Walk out immediately. Getreidegasse by lamplight, the fortress lit above the city — Salzburg at night before the crowds is extraordinary.',
+   tip:'Dinner on arrival: Zum Fidelen Affen (Priests\' Quarter, local and unpretentious) or a quiet café on Getreidegasse.',
+   price:'Free'},
+],
+actions:[
+  {badge:'now',name:'Salzburg Hotel — 3 nights (Aug 28–31)',note:'Book now. Hotel Stein fills first in Salzburg — famous rooftop, Old Town location.',price:'from €160/night',url:'https://www.booking.com/hotel/at/culthotelstein.html?checkin=2026-08-28&checkout=2026-08-31&group_adults=2&no_rooms=1',label:'Book Hotel'},
+  {badge:'ahed',name:'Széchenyi Baths — Online Ticket',note:'Buy 3–7 days ahead. Faster entry, guaranteed access at 9am.',price:'€33/pp',url:'https://szechenyibath.com/ticket',label:'Buy Ticket'},
+  {badge:'ahed',name:'Train — Budapest → Salzburg',note:'Book 1–2 weeks ahead. Midday departure after the baths.',price:'~€50–80/pp',url:'https://shop.oebbtickets.at/en/ticket',label:'Book OBB'},
+]},
+
+// ═══ DAY 7 — Aug 29 ══════════════════════════════════════════════
+{
+id:'day7',date:'Aug 29',dow:'Saturday',city:'Salzburg',dest:'salzburg',
+headline:'Salzburg — Full Day',subtitle:'Hohensalzburg · Old Town · M32 rooftop dinner',
+hotel:{ci:false,name:'Hotel Stein',location:'Old Town · Night 2 of 3'},
+transport:null,
+schedule:[
+  {time:'9:00 AM',what:'Hohensalzburg Fortress',
+   why:'Europe\'s best-preserved medieval fortress, 900 years old, on a 122m cliff above the city. The state rooms and views of Salzburg from the battlements are the defining image of the city. Go before 10am — tour coaches arrive by 10:30.',
+   tip:'Buy tickets online to go straight to the funicular gate with your mobile ticket. If you have the Salzburg Card — it\'s included.',
+   options:[
+     {rec:true,name:'All-Inclusive Ticket — Funicular + Fortress + Museums',note:'Covers the funicular both ways, all fortress rooms and exhibitions. The complete visit.',price:'€19.20/pp',url:'https://www.salzburg-burgen.at/en/hohensalzburg-castle/',label:'Buy Ticket'},
+     {rec:false,name:'Salzburg Card — Covers Fortress + Everything Else',note:'€45/pp for 48hr. Covers Hohensalzburg, Mozart Birthplace, city buses, river cruise. Strong value if here 2 full days. Buy on arrival day.',price:'€45/pp 48hr',url:'https://www.salzburg.info/en/sights/top10/salzburg-card',label:'Buy Card'},
+     {rec:false,name:'Walk Up Free — No Funicular',note:'The footpath up Festungsgasse is free. Takes ~20 minutes. You still pay for entry at the top (€14 without funicular).',price:'€14/pp on foot',url:'https://www.salzburg-burgen.at/en/hohensalzburg-castle/',label:'Official Site'},
+   ]
+  },
+  {time:'Midday',what:'Old Town Walk + Mozart + Mirabell Gardens',
+   why:'Mozart\'s Birthplace (Getreidegasse 9) is a genuine museum — the childhood apartment is preserved and meaningful, not a gift shop with a plaque. Then Mozartplatz, Residenzplatz fountain, across the Salzach to Mirabell Gardens: the Sound of Music filming location, formal garden with the Alps as backdrop.',
+   tip:'The Salzburg Card covers the Mozart Birthplace. Without it, €13/pp. Mirabell Gardens are free and extraordinary in August.',
+   options:[
+     {rec:true,name:'Mozart Birthplace (Geburtshaus) + Mirabell Gardens',note:'Both included in the Salzburg Card. Or €13/pp for the Birthplace. Gardens are free.',price:'€13/pp or free with card',url:'https://mozarteum.at/en/geburtshaus/',label:'Buy Ticket'},
+     {rec:false,name:'Mozart Residence (Wohnhaus) — Different Museum',note:'Where Mozart lived as a teenager. Different collection, less-visited. Interesting complement if you did the Birthplace.',price:'€13/pp or free with card',url:'https://mozarteum.at/en/wohnhaus/',label:'Buy Ticket'},
+     {rec:false,name:'Free Walk Only — Skip the Museums',note:'Just walk the Old Town streets and Mirabell garden. Everything is beautiful at street level for free.',price:'Free',url:null,label:null},
+   ]
+  },
+  {time:'Evening',what:'Dinner — Salzburg Choice',
+   why:'Salzburg has one exceptional rooftop dinner option and strong alternatives. The M32 is the premium experience — but Esszimmer is Salzburg\'s Michelin-starred option if you prefer an interior fine dining setting.',
+   tip:'For M32: arrive at approximately 8pm for golden hour on the rooftop. Ask for terrace seating facing the fortress. Reserve 2 weeks ahead.',
+   options:[
+     {rec:true,name:'M32 — Rooftop Above the Mönchsberg Museum',note:'The fortress and city below at golden hour. Best dinner setting in Salzburg. Reserve terrace table.',price:'€50–90/pp',url:'https://www.m32.at/reserve-a-table',label:'Reserve Table'},
+     {rec:false,name:'Esszimmer — Salzburg\'s Michelin Two-Star',note:'Interior fine dining. Tasting menu. Austria\'s most awarded Salzburg restaurant. Book further ahead.',price:'€120–180/pp',url:'https://www.esszimmer.com',label:'Reserve Table'},
+     {rec:false,name:'Zum Fidelen Affen — Local Salzburg Classic',note:'In the Priests\' Quarter (Priesterhausgasse). The antithesis of tourist dining — genuinely local, very affordable, always full of Salzburgers.',price:'€25–40/pp',url:'https://www.fideleraffe.at',label:'Official Site'},
+   ]
+  },
+],
+actions:[
+  {badge:'now',name:'Salzburg Card — 48hr (Buy on First Salzburg Day)',note:'€45/pp. Covers fortress, Mozart Birthplace, city buses, river cruise, 30+ attractions. Strong value.',price:'€45/pp',url:'https://www.salzburg.info/en/sights/top10/salzburg-card',label:'Buy Card'},
+  {badge:'ahed',name:'M32 Rooftop Dinner Reservation',note:'Reserve 1–2 weeks ahead. Request terrace table.',price:'€50–90/pp',url:'https://www.m32.at/reserve-a-table',label:'Reserve Table'},
+  {badge:'ther',name:'Hohensalzburg Fortress',note:'Covered by Salzburg Card. Or buy all-inclusive ticket at the funicular base.',price:'€19.20/pp',url:'https://www.salzburg-burgen.at/en/hohensalzburg-castle/',label:'Buy Ticket'},
+]},
+
+// ═══ DAY 8 — Aug 30 ══════════════════════════════════════════════
+{
+id:'day8',date:'Aug 30',dow:'Sunday',city:'Hallstatt — Day Trip',dest:'hallstatt',
+headline:'Hallstatt Day Trip',subtitle:'Return to Salzburg tonight · Optional Bad Ischl stop',
+hotel:{ci:false,name:'Hotel Stein',location:'Old Town · Night 3 of 3 (last night)'},
+transport:{
+  label:'GETTING THERE — POSTBUS OR CAR',
+  name:'Salzburg → Hallstatt — ~1.5 hours each way',
+  detail:'Option A (best): Rent a car for the day — fits Hallstatt + Dachstein + Bad Ischl in one loop. Option B: Postbus 542 from Salzburg Hbf to Bad Ischl, then local bus to Hallstatt. Park at the far-side car park outside Hallstatt village (cars banned in center). FERRY into the village: €4 single, CASH ONLY.',
+  links:[{label:'Ferry Info',url:'https://hallstattschifffahrt.at/en'},{label:'Car Hire Salzburg',url:'https://www.sixt.at/mietwagen/salzburg-bahnhof/'}]
+},
+schedule:[
+  {time:'Early',what:'Depart Salzburg — Arrive Hallstatt by 8:30am',
+   why:'Hallstatt has 780 permanent residents and receives millions of visitors per year. Peak crowds: 10am–3pm. The early ferry crossing with mist on the water is the moment. Arrive early, leave by midday.',
+   tip:'The FERRY is CASH ONLY — €4 single per person. No card reader. Pay the ferryman at the dock. Have coins or small notes ready.',
+   price:'Ferry €4/pp CASH'},
+  {time:'Morning',what:'Hallstatt Village + Salt Mine',
+   why:'Walk the market square, the lakeside promenade, and the ossuary (painted skulls — unusual and memorable). The salt mine (Salzwelten) is the world\'s oldest: miners, slides, underground salt lake. VERIFY reopening status before making it the centerpiece of the day.',
+   tip:'The village is extraordinary even if the mine is closed. The lake walk and the view of the village from the opposite shore (from the car park ferry) are experiences in themselves.',
+   options:[
+     {rec:true,name:'Village Walk + Salt Mine (if open)',note:'VERIFY REOPENING at salzwelten.at — announced for summer 2026 after major renovation. Buy combo if confirmed.',price:'€49/pp combo',url:'https://www.salzwelten.at/en/hallstatt/',label:'Check Status'},
+     {rec:false,name:'Village Walk Only — No Mine',note:'If mine is not yet open. The village, lake promenade, ossuary, and Echern valley walk are the experience.',price:'Free walk',url:null,label:null},
+     {rec:false,name:'Hallstatt Museum (World Heritage Museum)',note:'Covers Celtic Iron Age history of the Hallstatt culture. Compact, well-curated. Good if the mine is closed.',price:'€16/pp',url:'https://www.museum-hallstatt.at/en/',label:'Buy Ticket'},
+   ]
+  },
+  {time:'Midday',what:'Dachstein Panorama — Cable Car + Ice Cave + 5Fingers',
+   why:'35 min drive from Hallstatt. The cable car climbs to 2,109m. At the top: the Mammoth Cave, the Ice Cave (permanent ice year-round), and the 5Fingers glass platform — a walkway extending over a 400m sheer drop. On a clear day, you can see to Munich.',
+   tip:'Bring a warm layer regardless of the weather below — the ice cave is cold year-round. The 5Fingers has a queue for the edge photo — it moves quickly.',
+   options:[
+     {rec:true,name:'Panorama Ticket — Cable Car + Mammoth Cave + Ice Cave + 5Fingers',note:'The complete experience. All four elements on one ticket. Best value for the full day.',price:'€46.70/pp',url:'https://dachstein-salzkammergut.com/en/',label:'Buy Ticket'},
+     {rec:false,name:'Cable Car + 5Fingers Platform Only',note:'Skip the caves. Just the summit view and 5Fingers platform.',price:'~€34/pp',url:'https://dachstein-salzkammergut.com/en/',label:'Official Site'},
+     {rec:false,name:'Cable Car Only — Summit Walk',note:'Just the panorama. Alpine plateau walk at 2,109m. No caves, no platform ticket.',price:'~€28/pp',url:'https://dachstein-salzkammergut.com/en/',label:'Official Site'},
+   ]
+  },
+  {time:'Late',what:'Optional: Bad Ischl on the Return',
+   why:'Emperor Franz Joseph\'s summer capital — he spent every August here 1849–1914. The Kaiservilla is preserved exactly as he left it. Zauner Konditorei has made Viennese-quality pastry here since 1832.',
+   tip:'20-minute detour on the return to Salzburg. Worth it if energy allows — the coffeehouse alone is reason enough.',
+   options:[
+     {rec:true,name:'Kaiservilla + Zauner Konditorei',note:'Imperial villa + the best pastry in the Salzkammergut. Allow 2 hours.',price:'€23/pp villa',url:'https://www.kaiservilla.at/index.php/en/opening-times-prices',label:'Official Site'},
+     {rec:false,name:'Zauner Only — Skip the Villa',note:'Just the coffeehouse and a Gugelhupf or Linzer Torte. 20 minutes. Excellent.',price:'€5–10/pp',url:'https://www.zauner.at',label:'Official Site'},
+   ]
+  },
+],
+actions:[
+  {badge:'vrfy',name:'Hallstatt Salt Mine — Check Status Before Planning',note:'Verify at salzwelten.at before the day trip. Announced for summer 2026. Dachstein is the confirmed Plan B.',price:'€49/pp if open',url:'https://www.salzwelten.at/en/hallstatt/',label:'Check Status'},
+  {badge:'ahed',name:'Dachstein Panorama Ticket',note:'Book online ahead — sells out on summer weekends.',price:'€46.70/pp',url:'https://dachstein-salzkammergut.com/en/',label:'Buy Ticket'},
+  {badge:'ther',name:'Hallstatt Ferry — CASH ONLY',note:'€4 single. No card. Have small notes or coins ready.',price:'€4/pp',url:'https://hallstattschifffahrt.at/en',label:'Ferry Info'},
+  {badge:'now',name:'Book Wolfgangsee Hotel (CHECK-IN TOMORROW)',note:'If not yet booked — Villa Alma is the smallest property, fills earliest.',price:'from €100/night',url:'https://www.booking.com/hotel/at/villa-alma-sankt-gilgen1.html?checkin=2026-08-31&checkout=2026-09-03&group_adults=2&no_rooms=1',label:'Book Now'},
+]},
+
+// ═══ DAY 9 — Aug 31 ══════════════════════════════════════════════
+{
+id:'day9',date:'Aug 31',dow:'Monday',city:'Wolfgangsee',dest:'wolfgangsee',
+headline:'Salzburg → Wolfgangsee',subtitle:'Optional Untersberg hike · Bus to St. Gilgen · Lake arrival',
+hotel:{
+  ci:true,stay:'3 nights · Aug 31 – Sep 3',
+  name:'Villa Alma',stars:'★★★★ Lakeside Boutique',
+  detail:'St. Gilgen, directly on the Wolfgangsee. Private dock, mountain panorama. Small and intimate — not a resort, a lakehouse. The setting is what this leg of the trip is for: stillness, alpine water, zero agenda. Note: the Booking.com slug ends in "1" — this is correct.',
+  price:'€200–350/night',
+  url:'https://www.booking.com/hotel/at/villa-alma-sankt-gilgen1.html?checkin=2026-08-31&checkout=2026-09-03&group_adults=2&no_rooms=1',
+  alts:[
+    {name:'Parkhotel Billroth',stars:'★★★★',detail:'Grand historic hotel in St. Gilgen. Wide terrace over the lake, spacious classic rooms. More formal European resort atmosphere than Villa Alma.',price:'€180–290/night',url:'https://www.booking.com/hotel/at/parkhotel-billroth.html?checkin=2026-08-31&checkout=2026-09-03&group_adults=2&no_rooms=1'},
+    {name:'Romantikhotel Weißes Rössl',stars:'★★★★★',detail:'St. Wolfgang village (15 min by ferry). The legendary "White Horse Inn" since 1878. Lakeside beach, pool, impeccable service. The most romantic hotel on the Salzkammergut lakes.',price:'€280–500/night',url:'https://www.booking.com/hotel/at/romantikhotel-im-weissen-rossl.html?checkin=2026-08-31&checkout=2026-09-03&group_adults=2&no_rooms=1'},
+    {name:'Hotel Hollweger',stars:'★★★',detail:'St. Gilgen, clean and comfortable. Lake-view rooms at a fraction of the boutique price. Family-run, welcoming. Best pure value on the lake.',price:'€100–170/night',url:'https://www.booking.com/hotel/at/hollweger.html?checkin=2026-08-31&checkout=2026-09-03&group_adults=2&no_rooms=1'},
+  ]
+},
+transport:{label:'GETTING THERE — POSTBUS 150',name:'Salzburg Hbf → St. Gilgen — ~1 hour',detail:'Postbus 150 from Salzburg main station. Runs every 1–2 hours. Buy on board. Beautiful valley route. Alternatively: rent a car in Salzburg for maximum flexibility across this leg (Wolfgangsee, Munich, Ljubljana departure).',links:[]},
+schedule:[
+  {time:'Morning',what:'Optional — Untersberg Cable Car',
+   why:'If skies are clear: the Untersberg massif rises to 1,853m south of Salzburg. Summit plateau with views over Salzburg, Munich on the northern plain, and deep into Berchtesgaden. Allow 3–4 hours.',
+   tip:'Only go if skies are clear. Check Salzburg weather the evening before. A misty summit is just cold.',
+   options:[
+     {rec:true,name:'Untersberg Cable Car — Summit Panorama',note:'Go if it\'s clear. 12 minutes to the summit plateau. Extraordinary Alpine views.',price:'€34/pp return',url:'https://www.untersberg.net/en',label:'Official Site'},
+     {rec:false,name:'Skip — Slow Final Morning in Salzburg',note:'Last coffee at Café Tomaselli (since 1703). Walk the old town one more time without an agenda.',price:'Free',url:'https://www.tomaselli.at',label:'Café Site'},
+   ]
+  },
+  {time:'Midday',what:'Postbus 150 to St. Gilgen',
+   why:'The first view of Wolfgangsee as the bus rounds the hill above St. Gilgen. Check in. Drop everything. Let the deceleration happen.',
+   tip:null,price:'~€5/pp'},
+  {time:'Afternoon',what:'First Hours on the Lake',
+   why:'Walk the harbor. Swim (late August water is ~22°C, alpine clear). Find a bench. Watch the light on the mountains. This segment of the trip has no agenda — and that is the design.',
+   tip:'Best swimming: Fürbergbucht bay, 10-minute walk from St. Gilgen harbor.',
+   options:[
+     {rec:true,name:'Swim at Fürbergbucht Bay + Harbor Walk',note:'Best lake access near St. Gilgen. Crystal clear water, quiet cove.',price:'Free',url:null,label:null},
+     {rec:false,name:'Rent a Kayak or SUP',note:'Kayak and SUP rentals available at the harbor in St. Gilgen. 1–2 hour rental.',price:'~€15–25/hr',url:null,label:null},
+     {rec:false,name:'Afternoon Boat to St. Wolfgang Village',note:'First boat to the opposite shore. Walk the village, see the church, return on the next boat.',price:'€31/pp day pass',url:'https://www.wolfgangsee-schifffahrt.at/en',label:'Boat Timetable'},
+   ]
+  },
+],
+actions:[
+  {badge:'now',name:'Wolfgangsee Hotel — 3 nights (Aug 31 – Sep 3)',note:'Book now. Villa Alma is smallest and fills first. The "1" at end of booking slug is correct.',price:'from €100/night',url:'https://www.booking.com/hotel/at/villa-alma-sankt-gilgen1.html?checkin=2026-08-31&checkout=2026-09-03&group_adults=2&no_rooms=1',label:'Book Hotel'},
+  {badge:'ther',name:'Untersberg Cable Car (optional)',note:'Buy at base station in Grödig on the morning.',price:'€34/pp',url:'https://www.untersberg.net/en',label:'Official Site'},
+]},
+
+// ═══ DAY 10 — Sep 1 ══════════════════════════════════════════════
+{
+id:'day10',date:'Sep 1',dow:'Tuesday',city:'Munich — Day Trip',dest:'munich',
+headline:'Munich Day Trip',subtitle:'Return to Wolfgangsee tonight',
+hotel:{ci:false,name:'Villa Alma',location:'St. Gilgen · Night 2 of 3'},
+transport:{
+  label:'GETTING THERE + BACK — REGIONAL TRAIN',
+  name:'St. Gilgen → Salzburg (bus, 30 min) → Munich Hbf (Railjet, 1.5 hrs) each way',
+  detail:'Bayern Ticket: €29/day total for TWO people — covers all Bavarian regional trains including Salzburg–Munich. Buy at any station. Bus from St. Gilgen to Salzburg first, then direct Railjet. Depart early morning to maximize Munich time.',
+  links:[{label:'DB German Rail',url:'https://www.bahn.de/service/informationen/mobile-services'}]
+},
+schedule:[
+  {time:'Morning',what:'Arrive Munich · Marienplatz + Glockenspiel',
+   why:'Marienplatz is Munich\'s civic center. The Glockenspiel carillon performs at 11am and 12pm. New Town Hall tower (€3.50) gives the city panorama. Then: Viktualienmarkt outdoor food market — the most authentic place to eat in central Munich.',
+   tip:'Glockenspiel: position yourself on the square by 10:50am. The 12-minute performance can be hard to see if you arrive at 11:00.',
+   price:'€3.50 tower'},
+  {time:'Lunch',what:'Munich Lunch — Choose Your Setting',
+   why:'Two excellent contrasting options at different atmospheres.',
+   options:[
+     {rec:true,name:'Augustinerkeller — Local Beer Garden, 1812',note:'Arnulfstrasse, near Hbf. Chestnut tree garden, 5,000 seats, far fewer tourists than Hofbräuhaus. The authentic Munich beer garden experience.',price:'€15–25/pp',url:'https://augustinerkeller.de',label:'Official Site'},
+     {rec:false,name:'Hofbräuhaus — World Famous Beer Hall Since 1589',note:'Tourist-heavy but genuinely worth 90 minutes. Order: Mass (1L), Weißwurst before noon, Obatzda with pretzel.',price:'€18–28/pp',url:'https://www.hofbraeuhaus.de',label:'Official Site'},
+     {rec:false,name:'Viktualienmarkt — Open Air Food Stalls',note:'Local produce, roast chicken, Brotzeit boards. Eat at wooden tables with Münchners.',price:'€10–18/pp',url:'https://www.viktualienmarkt.de',label:'Official Site'},
+   ]
+  },
+  {time:'Afternoon',what:'Englischer Garten — Eisbach Surfers + Beer Garden',
+   why:'Europe\'s largest urban park. The Eisbach artificial river wave at Prinzregentenstrasse has world-class surfers year-round. Then: Chinese Tower beer garden for a Radler (beer + lemon).',
+   tip:'Eisbach wave: south end of the park at Prinzregentenstrasse bridge. Walk 20 minutes north to reach the Chinese Tower beer garden.',
+   options:[
+     {rec:true,name:'Eisbach Wave + Chinese Tower Beer Garden',note:'The full Englischer Garten afternoon. Surfers, then beer garden.',price:'Beer ~€5/liter',url:null,label:null},
+     {rec:false,name:'Deutsches Museum — World\'s Largest Science Museum',note:'Alternative for those who prefer indoors. Extraordinary collection of original technology. Allow 3+ hours.',price:'€15/pp',url:'https://www.deutsches-museum.de/en',label:'Buy Ticket'},
+     {rec:false,name:'Nymphenburg Palace + Gardens',note:'The Wittelsbach royal summer palace. ~20 min by tram from Hbf. Baroque gardens, canal, porcelain gallery.',price:'€10/pp',url:'https://www.schloss-nymphenburg.de/english/',label:'Official Site'},
+   ]
+  },
+  {time:'Evening',what:'Return Train to Wolfgangsee',
+   why:'Afternoon/evening train back to Salzburg, then bus to St. Gilgen.',
+   tip:null,price:'Covered by Bayern Ticket'},
+],
+actions:[
+  {badge:'ther',name:'Bayern Ticket — €29/day TOTAL for 2 people',note:'Buy at any station machine. Covers both of you all day on all Bavarian regional trains.',price:'€29/day total',url:'https://www.bahn.de/service/informationen/mobile-services',label:'DB Info'},
+]},
+
+// ═══ DAY 11 — Sep 2 ══════════════════════════════════════════════
+{
+id:'day11',date:'Sep 2',dow:'Wednesday',city:'Wolfgangsee',dest:'wolfgangsee',
+headline:'Wolfgangsee — Lake Day',subtitle:'Zwölferhorn summit · Paddle steamer to St. Wolfgang · Last evening',
+hotel:{ci:false,name:'Villa Alma',location:'St. Gilgen · Night 3 of 3 (last night)'},
+transport:null,
+schedule:[
+  {time:'9:00 AM',what:'Morning Activity — Choose Your Pace',
+   why:'The last full lake day. Choose based on energy: summit panorama for the view, or slow lake morning for rest.',
+   options:[
+     {rec:true,name:'Zwölferhorn Cable Car — 1,522m Summit Panorama',note:'Best single view of the entire lake. Hiking plateau on top. Allow 3–4 hours round trip.',price:'€36/pp',url:'https://tickets.zwoelferhorn.at',label:'Buy Ticket'},
+     {rec:false,name:'Kayak or SUP on the Lake',note:'Morning on the water at your own pace. Rentals at the harbor.',price:'~€15–25/hr',url:null,label:null},
+     {rec:false,name:'Walk the Falkenstein Path',note:'Free forest trail from St. Gilgen to Falkenstein chapel (45 min). Lake views through the trees.',price:'Free',url:null,label:null},
+   ]
+  },
+  {time:'Afternoon',what:'Historic Paddle Steamer to St. Wolfgang',
+   why:'The WolfgangseeTicket is an all-day boat pass. The paddle steamers — some dating to 1873 — cross to St. Wolfgang. Walk the village: the pilgrimage church with Michael Pacher\'s 1481 Gothic altarpiece (one of the finest in existence), the market square, the famous Weißes Rössl hotel terrace.',
+   tip:'Check the boat timetable and plan your crossing to have 2 hours in St. Wolfgang before the return boat. The Pacher altarpiece alone is reason enough for the crossing.',
+   price:'€31/pp day pass'},
+  {time:'Evening',what:'Last Dinner on the Lake',
+   why:'Final dinner in St. Gilgen. Local lake trout (Seeforelle, caught that morning), slow meal, the light changing on the water and mountains. No agenda. This is the full stop before Slovenia.',
+   tip:'Walk along the lakefront toward Fürberg after dinner. The path by moonlight is one of the finest things of the trip.',
+   price:'€30–50 for two'},
+],
+actions:[
+  {badge:'ther',name:'Zwölferhorn Cable Car',note:'Buy at the base station in St. Gilgen on the morning.',price:'€36/pp',url:'https://tickets.zwoelferhorn.at',label:'Official Site'},
+  {badge:'ther',name:'Wolfgangsee Boat — Day Pass',note:'Buy at the dock in St. Gilgen.',price:'€31/pp',url:'https://www.wolfgangsee-schifffahrt.at/en',label:'Timetable'},
+  {badge:'now',name:'Book Ljubljana Hotel (CHECK-IN IN 2 DAYS)',note:'3 nights including the birthday. Vander Urbani is 16 rooms — confirm now.',price:'from €130/night',url:'https://www.booking.com/hotel/si/vander-urbani-resort.html?checkin=2026-09-03&checkout=2026-09-06&group_adults=2&no_rooms=1',label:'Book Now'},
+  {badge:'now',name:'★ Strelec Birthday Dinner (Sep 5) — RESERVE NOW',note:'Most time-sensitive reservation of the trip. Inside Ljubljana Castle. Do not wait.',price:'€80–120/pp',url:'https://r.venuo.net/strelec',label:'Reserve Table',gold:true},
+]},
+
+// ═══ DAY 12 — Sep 3 ══════════════════════════════════════════════
+{
+id:'day12',date:'Sep 3',dow:'Thursday',city:'Ljubljana',dest:'ljubljana',
+headline:'Wolfgangsee → Ljubljana',subtitle:'Travel day · Arrive afternoon · First evening in Slovenia',
+hotel:{
+  ci:true,stay:'3 nights · Sep 3–6',
+  name:'Vander Urbani Resort',stars:'★★★★★',
+  detail:'Old Town Ljubljana, Ljubljanica riverside. 16 rooms — genuinely boutique. Rooftop plunge pool, exceptional breakfast, premium design throughout. Steps from the Triple Bridge and the castle funicular. The right base for September 5.',
+  price:'€200–350/night',
+  url:'https://www.booking.com/hotel/si/vander-urbani-resort.html?checkin=2026-09-03&checkout=2026-09-06&group_adults=2&no_rooms=1',
+  alts:[
+    {name:'Antiq Palace Hotel & Spa',stars:'★★★★★',detail:'16th-century Renaissance palace. 21 rooms. Private garden courtyard, spa. The most historically significant accommodation in Ljubljana.',price:'€220–380/night',url:'https://www.booking.com/hotel/si/antiq-palace.html?checkin=2026-09-03&checkout=2026-09-06&group_adults=2&no_rooms=1'},
+    {name:'Hotel Cubo',stars:'★★★★',detail:'Modern design boutique near Prešeren Square. Glass and wood aesthetic, clean contemporary. Excellent service. For those who prefer modern over heritage.',price:'€160–260/night',url:'https://www.booking.com/hotel/si/cubo.html?checkin=2026-09-03&checkout=2026-09-06&group_adults=2&no_rooms=1'},
+    {name:'Urban Boutique Hotel',stars:'★★★★',detail:'Near Prešeren Square, Old Town walking distance. Comfortable, good breakfast. Best value boutique in Ljubljana.',price:'€130–220/night',url:'https://www.booking.com/hotel/si/urban-boutique.html?checkin=2026-09-03&checkout=2026-09-06&group_adults=2&no_rooms=1'},
+  ]
+},
+transport:{
+  label:'GETTING THERE',
+  name:'St. Gilgen → Salzburg → Ljubljana — ~5 hours total',
+  detail:'Book 1–2 weeks ahead.',
+  links:[]
+},
+schedule:[
+  {time:'Morning',what:'Depart Wolfgangsee — Choose Your Route',
+   why:'Several options depending on your preference for speed vs. flexibility.',
+   options:[
+     {rec:true,name:'Flixbus — Salzburg Direct to Ljubljana (~4 hrs)',note:'Most straightforward. Book online 1–2 weeks ahead.',price:'~€20–35/pp',url:'https://www.flixbus.com',label:'Book Flixbus'},
+     {rec:false,name:'OBB Train — via Villach (~5.5 hrs)',note:'Scenic route. More comfortable seating. Change at Villach.',price:'~€30–50/pp',url:'https://shop.oebbtickets.at/en/ticket',label:'Book OBB'},
+     {rec:false,name:'Rental Car — Most Flexible',note:'Drive direct (~4 hrs). Stop at Bled on the way (preview before tomorrow\'s day trip). Return car in Ljubljana.',price:'~€40–80/day',url:'https://www.sixt.at/mietwagen/salzburg-bahnhof/',label:'Car Rental'},
+   ]
+  },
+  {time:'Afternoon',what:'Arrive Ljubljana — Check In',
+   why:'Drop bags. Walk to the nearest riverside terrace for an espresso. Ljubljana is the calmest capital in Europe — small, walkable, unhurried.',
+   tip:'Ljubljana\'s Old Town is car-free. Everything — castle, river, restaurants, market — is within 10 minutes on foot from the center.',
+   price:''},
+  {time:'Evening',what:'First Ljubljana Evening — Riverside Walk',
+   why:'Triple Bridge → Dragon Bridge → riverside. Ljubljana by night: outdoor cafés, local energy, no one rushing. Let the transition from 5 cities to this quiet capital happen.',
+   tip:'Dinner: Gostilna Sokol (traditional Slovenian, Old Town), Taverna Tatjana (excellent fish, riverside). Both walkable from most hotels.',
+   options:[
+     {rec:true,name:'Gostilna Sokol — Traditional Slovenian Cuisine',note:'Old Town, reliable, excellent local dishes. Wild game, dumplings, Slovenian wines.',price:'€25–40/pp',url:'https://www.gostilna-sokol.com',label:'Official Site'},
+     {rec:false,name:'Taverna Tatjana — Riverside Fish Restaurant',note:'Adriatic fish on the Ljubljanica riverbank. The best fish restaurant in Ljubljana.',price:'€35–55/pp',url:'https://www.tavernatat jana.si',label:'Official Site'},
+     {rec:false,name:'Valter 1966 — Local Institution',note:'Small, intimate, Slovenian home cooking. Very local. No frills. Outstanding.',price:'€20–35/pp',url:null,label:null},
+   ]
+  },
+],
+actions:[
+  {badge:'now',name:'Ljubljana Hotel — 3 nights (Sep 3–6)',note:'Book now. 3 nights including the birthday.',price:'from €130/night',url:'https://www.booking.com/hotel/si/vander-urbani-resort.html?checkin=2026-09-03&checkout=2026-09-06&group_adults=2&no_rooms=1',label:'Book Hotel'},
+  {badge:'now',name:'★ Strelec Birthday Dinner (Sep 5) — RESERVE IMMEDIATELY',note:'Book the moment the hotel is confirmed. The most important reservation of the trip.',price:'€80–120/pp',url:'https://r.venuo.net/strelec',label:'Reserve Table',gold:true},
+  {badge:'ahed',name:'Transport — Wolfgangsee → Ljubljana',note:'Book 1–2 weeks ahead. Flixbus direct is the simplest.',price:'~€20–50/pp',url:'https://www.flixbus.com',label:'Book Flixbus'},
+]},
+
+// ═══ DAY 13 — Sep 4 ══════════════════════════════════════════════
+{
+id:'day13',date:'Sep 4',dow:'Friday',city:'Lake Bled — Day Trip',dest:'bled',
+headline:'Lake Bled Day Trip',subtitle:'Return to Ljubljana for a light evening before the birthday',
+hotel:{ci:false,name:'Vander Urbani Resort',location:'Old Town · Night 2 of 3'},
+transport:{
+  label:'GETTING THERE — CHOOSE YOUR MODE',
+  name:'Ljubljana → Lake Bled — ~1.5 hours each way',
+  detail:'Two options: guided minibus tour (easiest, no car needed) or rental car (maximum flexibility, ~50 min direct drive).',
+  links:[]
+},
+schedule:[
+  {time:'Morning',what:'Getting to Lake Bled — Choose Your Mode',
+   why:'The easiest option without a rental car is a guided minibus tour from Ljubljana. A rental car gives you full control over timing and adds Vintgar Gorge more easily.',
+   options:[
+     {rec:true,name:'Roundabout Travel Guided Tour — Includes Boat + Castle',note:'Departs Ljubljana. Includes pletna boat ride to island, Bled Castle, option to add Vintgar Gorge. Book ahead — fills.',price:'€92/pp',url:'https://www.travelroundabout.com/en/tours-from-ljubljana/bled-lake-island-castle-half-day/',label:'Book Tour'},
+     {rec:false,name:'Rental Car — Drive Direct (~50 min)',note:'Maximum flexibility. Add Vintgar Gorge whenever you want. Return on your own schedule.',price:'~€40/day',url:'https://www.sixt.si/mietwagen/ljubljana-airport/',label:'Car Rental'},
+     {rec:false,name:'Public Bus — Ljubljana → Bled (1.5 hrs)',note:'Budget option. Arriva bus from Ljubljana Bus Station. Return on evening bus.',price:'~€8/pp each way',url:'https://www.arriva.si',label:'Bus Schedule'},
+   ]
+  },
+  {time:'Midday',what:'Pletna Boat + Island Church + Wishing Bell',
+   why:'The pletna is a traditional hand-rowed wooden boat — only pletna men (a hereditary guild) are permitted on the lake. They row you to the island. 99 steps up to the Church of the Assumption. Ring the bronze wishing bell inside: three rings for the wish to hold.',
+   tip:'The pletna ride: ~€15/pp if booking separately, included in Roundabout tour. Bring cash for the ferryman.',
+   price:'Incl. in tour or ~€15/pp'},
+  {time:'Afternoon',what:'Bled Castle + Vintgar Gorge',
+   why:'Bled Castle on the 130m cliff: the definitive lake panorama. Vintgar Gorge: 1.6km wooden walkway through an emerald river gorge with waterfalls. Two of the most beautiful natural experiences in Slovenia.',
+   tip:'If energy is limited after the island: do the castle view, skip the gorge. The castle view is the priority.',
+   options:[
+     {rec:true,name:'Bled Castle + Vintgar Gorge (both)',note:'Do both if energy allows. Castle gives the panorama. Gorge is the natural spectacle.',price:'€16/pp castle + €15/pp gorge',url:'https://tickets.vintgar.si',label:'Buy Vintgar Ticket'},
+     {rec:false,name:'Bled Castle Only',note:'If time or energy is limited. The castle view alone is worth the day.',price:'€16/pp',url:null,label:null},
+     {rec:false,name:'Ojstrica Viewpoint — Free Alternative to Castle',note:'15-min steep hike gives the famous full-lake panorama for free. Better than the castle view for the classic postcard shot.',price:'Free',url:null,label:null},
+   ]
+  },
+  {time:'Late',what:'Kremšnita at Park Hotel Bled',
+   why:'Bled\'s cream cake: cold vanilla custard and whipped cream between two layers of pastry, created here in 1953. Served nowhere else in this form. Order one each.',
+   tip:'The Park Hotel terrace facing the lake. The cream cake, lake view, September afternoon light: the perfect ending.',
+   price:'~€5/pp',
+   options:[
+     {rec:true,name:'Kremšnita at Park Hotel Bled — The Original',note:'Traditional setting, terrace facing the lake. Non-negotiable.',price:'~€5/pp',url:'https://www.hotel-park-bled.si',label:'Official Site'},
+     {rec:false,name:'Kremšnita + Coffee at Sova Cake Shop',note:'The local alternative to the hotel version. Slightly different recipe, very good.',price:'~€5/pp',url:null,label:null},
+   ]
+  },
+  {time:'Evening',what:'Return Ljubljana · Light Dinner',
+   why:'Back to Ljubljana by early evening. Light meal tonight — save everything for the birthday dinner tomorrow.',
+   tip:null,price:''},
+],
+actions:[
+  {badge:'now',name:'Roundabout Travel — Lake Bled Tour',note:'Book now. Fills 1–2 weeks ahead in September.',price:'€92/pp',url:'https://www.travelroundabout.com/en/tours-from-ljubljana/bled-lake-island-castle-half-day/',label:'Book Tour'},
+  {badge:'ahed',name:'Vintgar Gorge — Timed Entry',note:'Book online 2–3 days before. Capacity-controlled.',price:'€15/pp',url:'https://tickets.vintgar.si',label:'Buy Ticket'},
+  {badge:'ther',name:'Bled Castle Entry',note:'Buy at the castle gate.',price:'€16/pp',url:'https://www.blejski-grad.si/en',label:'Official Site'},
+]},
+
+// ═══ DAY 14 — Sep 5 ══════════════════════════════════════════════
+{
+id:'day14',date:'Sep 5',dow:'Saturday',city:'Ljubljana',dest:'ljubljana',
+isBirthday:true,
+headline:'Birthday — Ljubljana',subtitle:'A day that belongs entirely to you',
+hotel:{ci:false,name:'Vander Urbani Resort',location:'Old Town · Night 3 of 3 (last night)'},
+transport:null,
+schedule:[
+  {time:'Morning',what:'Tivoli Park — No Agenda',
+   why:'Plečnik\'s great urban park. Walk. Read. Sit in the sun. Let 15 days of travel settle. No sights, no tickets, nothing to accomplish. This morning belongs to you.',
+   tip:'Mačja hiša café in the park for coffee and pastry. A bench by the central promenade.',
+   price:'Free'},
+  {time:'Afternoon',what:'Ljubljana Castle',
+   why:'Funicular up. Walk the battlements. Look south toward the Kamnik Alps and north across the city roofscape. You have traveled from Los Angeles to this view. Fourteen days and seven destinations to stand here. Let that land.',
+   tip:'Arrive 3–4pm for afternoon light on the mountains. The castle is never crowded on a Saturday afternoon.',
+   options:[
+     {rec:true,name:'Funicular + Castle Entry',note:'Includes the funicular ride, castle exhibitions, and Tower Walk with Alpine views.',price:'€15/pp',url:'https://www.ljubljanagasd.si/en/tickets',label:'Buy Ticket'},
+     {rec:false,name:'Walk Up + Castle Entry',note:'Free 15-minute uphill path. Pay entry at the castle gate.',price:'€10/pp (walk)',url:'https://www.ljubljanagasd.si/en/tickets',label:'Official Site'},
+     {rec:false,name:'Castle Exterior Only — Free Walk',note:'The outer walls and view from the hill are free. Just walk up the path.',price:'Free',url:null,label:null},
+   ]
+  },
+  {time:'Evening',what:'★ Birthday Dinner — Ljubljana Castle',
+   why:'Inside the castle. Michelin Plate. Slovenian cuisine at its finest — wild game, foraged herbs, local wine list. Floor-to-ceiling windows over the city. Sunset over the Julian Alps as the city turns gold below. This is the dinner. This is the night. This is why Ljubljana is last.',
+   tip:'Arrive at 8pm for sunset. The view from the table at dusk, city illuminating below and the Alps fading into evening: this is the birthday moment.',
+   options:[
+     {rec:true,name:'Strelec — Inside Ljubljana Castle · Michelin Plate',note:'Book immediately on hotel confirmation. Request a window table. The primary plan.',price:'€80–120/pp',url:'https://r.venuo.net/strelec',label:'Reserve Table'},
+     {rec:false,name:'Backup #1: Gostilna AS — Fine Slovenian Dining',note:'If Strelec is unavailable. Award-winning wine cellar, traditional excellence. One of the best in Slovenia.',price:'€60–90/pp',url:'https://www.gostilna-as.si',label:'Reserve Table'},
+     {rec:false,name:'Backup #2: Aftr by Chef Luka Košir',note:'Michelin-starred team, relaxed bistro format. Creative Slovenian tasting menu.',price:'€50–80/pp',url:'https://aftr.si',label:'Reserve Table'},
+   ]
+  },
+],
+actions:[
+  {badge:'now',name:'★ Strelec Restaurant — RESERVE IMMEDIATELY',note:'Inside Ljubljana Castle. Michelin Plate. Most important booking of the entire trip. Request window table.',price:'€80–120/pp',url:'https://r.venuo.net/strelec',label:'Reserve Table',gold:true},
+  {badge:'now',name:'Backup: Gostilna AS',note:'Reserve alongside Strelec as your contingency. Cancel whichever you don\'t need.',price:'€60–90/pp',url:'https://www.gostilna-as.si',label:'Reserve Table',gold:true},
+  {badge:'ther',name:'Ljubljana Castle Funicular + Entry',note:'Buy at base station on the afternoon.',price:'€15/pp',url:'https://www.ljubljanagasd.si/en/tickets',label:'Buy Ticket'},
+]},
+
+// ═══ DAY 15 — Sep 6 ══════════════════════════════════════════════
+{
+id:'day15',date:'Sep 6',dow:'Sunday',city:'Fly Home',dest:'travel',
+headline:'Depart Ljubljana',subtitle:'LJU → Frankfurt or Zurich → LAX',
+hotel:null,
+transport:{
+  label:'AIRPORT TRANSFER',
+  name:'Markun Shuttle — Ljubljana Old Town → LJU Airport — ~30 min',
+  detail:'Markun is the established local transfer: fixed price ~€40 flat, door-to-door, no negotiation. Book 1–2 days ahead. Ljubljana Airport (LJU) is small and relaxed — 2 hours before departure is sufficient. Short hop to Frankfurt (Lufthansa) or Zurich (SWISS), then transatlantic to LAX.',
+  links:[{label:'Book Markun',url:'https://markun.eu/en/'}]
+},
+schedule:[
+  {time:'Morning',what:'Final Ljubljana Breakfast',
+   why:'One last slow breakfast. The last European coffee. The kind of morning that stays.',
+   tip:'Kavarna Tromostovje at the Triple Bridge for espresso and the river view. No rush.',
+   options:[
+     {rec:true,name:'Hotel Breakfast — Vander Urbani',note:'The hotel breakfast is excellent. Most relaxed option before departure.',price:'Incl. in rate',url:null,label:null},
+     {rec:false,name:'Kavarna Tromostovje — Riverside Espresso',note:'At the Triple Bridge. Last view of the river and the old city.',price:'€5–10/pp',url:null,label:null},
+   ]
+  },
+  {time:'Midday',what:'Markun Shuttle to Ljubljana Airport',
+   why:'~30 minutes. LJU is small — 2 hours before departure is enough. Easy farewell.',
+   tip:null,price:'€40 flat'},
+  {time:'Afternoon',what:'LJU → Hub → LAX',
+   why:'1.5-hour hop to Frankfurt or Zurich, then 11-hour transatlantic home. Arrive LAX evening Sep 6 or early Sep 7.',
+   tip:'Window seat on the FRA–LAX leg: on clear days, Greenland, then the Canadian Rockies, then California.',
+   price:''},
+],
+actions:[
+  {badge:'now',name:'Return Flights — LJU → LAX (Sep 6)',note:'If not yet booked. Lufthansa via Frankfurt or SWISS via Zurich.',price:'See flight search',url:'https://www.lufthansa.com',label:'Search Flights'},
+  {badge:'ahed',name:'Markun Airport Transfer',note:'Book 1–2 days before departure.',price:'€40 flat',url:'https://markun.eu/en/',label:'Book Transfer'},
+]},
+]; // end DAYS
+
+
+// ─── RENDERERS ──────────────────────────────────────────────────────────────
+
+function badgeEl(type){
+  const m={now:['b-now','BOOK TODAY'],ahed:['b-ahed','BOOK AHEAD'],ther:['b-ther','PAY THERE'],free:['b-free','FREE'],vrfy:['b-vrfy','VERIFY FIRST']};
+  const[cls,lbl]=m[type]||m.ther;
+  return`<span class="badge ${cls}">${lbl}</span>`;
+}
+function lbtn(url,label,gold=false,sm=false,dim=false){
+  if(!url||!label)return'';
+  const c=['lbtn',gold?'g':'',sm?'sm':'',dim?'dim':''].filter(Boolean).join(' ');
+  return`<a href="${url}" target="_blank" class="${c}">${label}</a>`;
+}
+
+function renderHotel(d){
+  if(!d.hotel)return'';
+  const h=d.hotel, col=C[d.dest]||'#4a5068';
+  if(!h.ci){
+    return`<div class="same-hotel">
+      <div class="sh-dot" style="background:${col}"></div>
+      <div class="sh-body"><div class="sh-name">${h.name}</div><div class="sh-meta">${h.location||''}</div></div>
+    </div>`;
+  }
+  let s=`<div class="hotel-card">`;
+  s+=`<div class="hotel-card-lbl">🏨 Where You Sleep — ${h.stay||''}</div>`;
+  s+=`<div class="hotel-rec">
+    <div class="hotel-rec-badge">★ Our Recommendation</div>
+    <div class="hotel-rec-name">${h.name}</div>
+    <div class="hotel-rec-stars">${h.stars||''}</div>
+    <div class="hotel-rec-detail">${h.detail||''}</div>
+    <div class="hotel-rec-foot">
+      <span class="hotel-rec-price">${h.price||''}</span>
+      ${lbtn(h.url,'Book on Booking.com',true)}
+    </div>
+  </div>`;
+  if(h.alts&&h.alts.length){
+    s+=`<div class="hotel-alts-hd">Also Consider — ${h.alts.length} Alternatives</div>`;
+    h.alts.forEach((a,i)=>{
+      s+=`<div class="hotel-alt">
+        <div class="ha-num">${i+1}</div>
+        <div class="ha-info"><div class="ha-name"><span class="ha-stars">${a.stars}</span>${a.name}</div><div class="ha-detail">${a.detail||''}</div></div>
+        <div class="ha-right"><span class="ha-price">${a.price||''}</span>${lbtn(a.url,'Book',false,true)}</div>
+      </div>`;
+    });
+  }
+  s+=`</div>`;
+  return s;
+}
+
+function renderTransport(d){
+  if(!d.transport)return'';
+  const t=d.transport;
+  const tlinks=(t.links||[]).map(l=>lbtn(l.url,l.label)).join('');
+  return`<div class="transport-card">
+    <div class="tc-lbl">✈ ${t.label}</div>
+    <div class="tc-name">${t.name}</div>
+    <div class="tc-detail">${t.detail}</div>
+    ${tlinks?`<div class="tc-links">${tlinks}</div>`:''}
+  </div>`;
+}
+
+function renderOptions(opts){
+  if(!opts||!opts.length)return'';
+  let s=`<div class="opt-hd">Your Options</div><div class="opt-list">`;
+  opts.forEach(o=>{
+    s+=`<div class="opt-item${o.rec?' rec':''}">
+      <div class="oi-star">${o.rec?'★':''}</div>
+      <div class="oi-body">
+        <div class="oi-name">${o.name}</div>
+        ${o.note?`<div class="oi-note">${o.note}</div>`:''}
+      </div>
+      <div class="oi-right">
+        <span class="oi-price">${o.price||''}</span>
+        ${(o.url&&o.label)?lbtn(o.url,o.label,false,true):''}
+      </div>
+    </div>`;
+  });
+  s+=`</div>`;
+  return s;
+}
+
+function buildSidebar(){
+  const sb=document.getElementById('sb');
+  GROUPS.forEach(g=>{
+    const lbl=document.createElement('div');
+    lbl.className='sb-group';lbl.textContent=g.label;sb.appendChild(lbl);
+    g.ids.forEach(id=>{
+      const d=DAYS.find(x=>x.id===id);
+      if(!d)return;
+      const el=document.createElement('div');
+      el.className='sb-day';el.id='nav-'+id;el.onclick=()=>go(id);
+      const short=d.city.split(' →')[0].split(' —')[0].split(' (')[0];
+      el.innerHTML=`<div class="sb-dot" style="background:${C[d.dest]||'#4a5068'}"></div>
+        <div><div class="sb-date">${d.date}</div><div class="sb-city">${d.isBirthday?'🎂 Birthday':short}</div></div>`;
+      sb.appendChild(el);
+    });
+  });
+}
+
+function buildContent(){
+  const ct=document.getElementById('ct');
+  DAYS.forEach(d=>{
+    const panel=document.createElement('div');
+    panel.className='day-panel'+(d.isBirthday?' bday-hd':'');
+    panel.id='panel-'+d.id;
+    const col=C[d.dest]||'#4a5068';
+    let h='';
+
+    // Header
+    h+=`<div class="day-header">
+      <div class="dh-eyebrow"><span class="dh-dot" style="background:${col}"></span>${d.dow} · ${d.city}${d.isBirthday?' · <span style="color:var(--gold)">★ Birthday</span>':''}</div>
+      <h1>${d.headline}</h1>
+      <div class="dh-sub">${d.date} &nbsp;·&nbsp; ${d.subtitle}</div>
+    </div>`;
+
+    // Birthday banner
+    if(d.isBirthday){
+      h+=`<div class="bday-banner"><div class="bday-icon">🎂</div><div>
+        <div class="bday-ttl">Happy Birthday — Tonight is Yours</div>
+        <div class="bday-sub">Strelec Restaurant inside Ljubljana Castle. Michelin Plate. City panorama at dusk over the Julian Alps. Reserve the moment the hotel is confirmed.</div>
+      </div></div>`;
+    }
+
+    // Hotel + transport
+    h+=renderHotel(d);
+    h+=renderTransport(d);
+
+    // Schedule
+    if(d.schedule&&d.schedule.length){
+      h+=`<div class="sec-hd">Today's Schedule</div><div class="sched">`;
+      d.schedule.forEach(s=>{
+        h+=`<div class="tb">
+          <div class="tb-time">${s.time}</div>
+          <div class="tb-body">
+            <div class="tb-what">${s.what}</div>
+            <div class="tb-why">${s.why}</div>
+            ${s.tip?`<div class="tb-tip">Insider tip: ${s.tip}</div>`:''}
+            ${s.price?`<div style="font-size:12px;font-weight:600;color:var(--t2);margin-top:5px;">${s.price}</div>`:''}
+            ${renderOptions(s.options)}
+          </div>
+        </div>`;
+      });
+      h+=`</div>`;
+    }
+
+    // Booking actions
+    if(d.actions&&d.actions.length){
+      h+=`<div class="sec-hd" style="margin-top:24px;">What to Book &amp; Buy</div><div class="actions">`;
+      d.actions.forEach(a=>{
+        h+=`<div class="ac">
+          ${badgeEl(a.badge)}
+          <div class="ac-info"><div class="ac-name">${a.name}</div>${a.note?`<div class="ac-note">${a.note}</div>`:''}</div>
+          <div class="ac-right">${a.price?`<span class="ac-price">${a.price}</span>`:''}${lbtn(a.url,a.label,a.gold||false,true)}</div>
+        </div>`;
+      });
+      h+=`</div>`;
+    }
+
+    panel.innerHTML=h;
+    ct.appendChild(panel);
+  });
+}
+
+function go(id){
+  document.querySelectorAll('.day-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-day').forEach(n=>n.classList.remove('active'));
+  const panel=document.getElementById('panel-'+id);
+  const nav=document.getElementById('nav-'+id);
+  if(panel){panel.classList.add('active');document.getElementById('ct').scrollTop=0;}
+  if(nav){nav.classList.add('active');nav.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'});}
+}
+
+buildSidebar();
+buildContent();
+go('day1');
+</script>
+</body>
+</html>
